@@ -8,11 +8,12 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    name: 'CI | python v${{ matrix.python-version }}, postgres v${{ matrix.postgres-version }}'
+    name: "CI | python v${{ matrix.python-version }}, postgres v${{ matrix.postgres-version }}"
     strategy:
+      fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10', '3.11']
-        postgres-version: ['12', '13', '14']
+        python-version: ["3.9", "3.10", "3.11"]
+        postgres-version: ["12", "13", "14"]
 
     steps:
       - uses: actions/checkout@v3
@@ -30,5 +31,5 @@ jobs:
       - name: Run Tests
         env:
           POSTGRES_VERSION: ${{ matrix.postgres-version }}
-          PYTHON_IMAGE_TAG: '${{ matrix.python-version }}-slim'
+          PYTHON_IMAGE_TAG: "${{ matrix.python-version }}-slim"
         run: poetry run ./run-tests.sh

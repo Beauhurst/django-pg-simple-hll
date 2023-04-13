@@ -97,7 +97,7 @@ alpha as (
             when n_buckets.n_buckets = 16 then 0.673 -- for precision 4
             when n_buckets.n_buckets = 32 then 0.697 -- for precision 5
             when n_buckets.n_buckets = 64 then 0.709 -- for precision 6
-            else (0.7213 / (1 + 1.079 / n_buckets.n_buckets)) -- for precision >=7
+            else (0.7213 / (1 + 1.079 / n_buckets.n_buckets)) -- for precision >= 7
         end as alpha
     from n_buckets
 ),
