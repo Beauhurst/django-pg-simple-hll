@@ -5,16 +5,21 @@
 -- input is the element we are considering
 -- hll_precision is the precision we are using for the approximation
 --  it use used to calculate the number of buckets
-create or replace function
-hll_bucket(hll_agg_state int[], input anyelement, hll_precision int)
-returns int[]
-language plpgsql immutable strict parallel safe as
-$$
+create or replace function hll_bucket(
+    hll_agg_state int[],
+    input anyelement,
+    hll_precision int
+) returns int[]
+language plpgsql immutable strict parallel safe as $$
 declare
-    n_buckets int := POW(2, hll_precision); -- eg.. for 512 buckets, hll_precision is 9 because 2**9 -> 512
-    hashed_input int := hashtext(input::text); -- transform the input into a text and hash it
-    bucket_hash int := hashed_input & ~(1 << 31); -- keep all the significant bits, without the sign
-    bucket_key int := hashed_input & (n_buckets - 1); -- bucket the hash into one of n buckets
+    -- eg. for 512 buckets, hll_precision is 9 because 2**9 -> 512
+    n_buckets int := POW(2, hll_precision);
+    -- transform the input into a text and hash it
+    hashed_input int := hashtext(input::text);
+    -- keep all the significant bits, without the sign
+    bucket_hash int := hashed_input & ~(1 << 31);
+    -- bucket the hash into one of n buckets
+    bucket_key int := hashed_input & (n_buckets - 1);
     -- pre fetch the hash for occupying the corresponding bucket for the input
     -- we add 2 because
     --  1. postgres arrays are 1-indexed
@@ -24,7 +29,8 @@ begin
     -- we can only handle precision up to 11 or 2048 buckets
     -- because hashtext produces a hash of int size with 31 useable bits
     if hll_precision < 4 or hll_precision > 11 then
-        raise exception 'invalid hll_precision: % - must be between 4 (16 buckets) and 11 (2048 buckets) inclusive', hll_precision;
+        raise exception 'invalid hll_precision: % - must be between 4 (16 buckets) and 11 (2048 buckets) inclusive',
+            hll_precision;
     end if;
     -- postgres squeezes null elements in the array, we don't want that,
     -- so we add a first and last element to keep a fixed size
@@ -37,46 +43,44 @@ begin
         hll_agg_state[bucket_key + 2] := bucket_hash;
     end if;
     return hll_agg_state;
-end
-$$;
+end $$;
 
 
 -- sfunc with default precision of 9
-create or replace function
-hll_bucket(hll_agg_state int[], input anyelement)
-returns int[]
-language plpgsql immutable strict parallel safe as
-$$
+create or replace function hll_bucket(
+    hll_agg_state int[],
+    input anyelement
+) returns int[]
+language plpgsql immutable strict parallel safe as $$
 begin
     return hll_bucket(hll_agg_state, input, 9);
-end
-$$;
+end $$;
+
 
 -- The combinefunc
 -- combines two states, taking the smaller hash from each corresponding index
 -- we don't have any extra logic here for the two flanking extra elements at
 -- the beginning and the end of the array because they should just be
 -- copied as they are the same
-create or replace function
-hll_bucket_combine(hll_left_agg_state int[], hll_right_agg_state int[])
-returns int[]
-language sql immutable strict parallel safe as
-$$
+create or replace function hll_bucket_combine(
+    hll_left_agg_state int[],
+    hll_right_agg_state int[]
+) returns int[]
+language sql immutable strict parallel safe as $$
 select array(
     select
         LEAST(left_bucket_hash, right_bucket_hash)
     from
-        unnest(hll_left_agg_state, hll_right_agg_state) as state(left_bucket_hash, right_bucket_hash)
-)
-$$;
+        unnest(hll_left_agg_state, hll_right_agg_state) as agg_state(left_bucket_hash, right_bucket_hash)
+) $$;
+
 
 -- The finalfunc
 -- takes the hll_agg_state and approximates cardinality
-create or replace function
-hll_approximate(hll_agg_state int[])
-returns int
-language sql immutable as
-$$
+create or replace function hll_approximate(
+    hll_agg_state int[]
+) returns int
+language sql immutable as $$
 with n_buckets as (
     select array_length(hll_agg_state, 1) - 2 as n_buckets
 ),
@@ -119,22 +123,24 @@ estimation as (
 -- correct for biases
 select
     case
-        when estimation.approximated_cardinality < 2.5 * n_buckets.n_buckets
-            and counted.n_zero_buckets > 0 then (
+        when
+            estimation.approximated_cardinality < 2.5 * n_buckets.n_buckets
+            and counted.n_zero_buckets > 0 then
+        (
                 alpha.alpha
                 * (
                     n_buckets.n_buckets
-                    * LOG(2, (n_buckets.n_buckets::numeric / counted.n_zero_buckets)::int)
+                    * LOG(2, (n_buckets.n_buckets::numeric / counted.n_zero_buckets)::int
                 )
-            )::int
+            )
+        )::int
         else estimation.approximated_cardinality
     end as approximated_cardinality_corrected
-from estimation, alpha, n_buckets, counted
-$$;
+from estimation, alpha, n_buckets, counted $$;
+
 
 -- aggregation with precision argument
-create or replace aggregate
-hll_approx_cardinality(anyelement, int) (
+create or replace aggregate hll_approx_cardinality(anyelement, int) (
     SFUNC = hll_bucket,
     STYPE = int[],
     FINALFUNC = hll_approximate,
@@ -143,9 +149,9 @@ hll_approx_cardinality(anyelement, int) (
     PARALLEL = safe
 );
 
+
 --  aggregation with default precision argument
-create or replace aggregate
-hll_approx_cardinality(anyelement) (
+create or replace aggregate hll_approx_cardinality(anyelement) (
     SFUNC = hll_bucket,
     STYPE = int[],
     FINALFUNC = hll_approximate,
