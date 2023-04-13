@@ -79,7 +79,7 @@ language sql immutable as
 $$
 with hll_agg_state_table as (
     select
-        31 - FLOOR(LOG(2, bucket_hash)) as bucket_hash,
+        31 - FLOOR(LOG(2, bucket_hash)) as most_significant_bit,
         bucket_key,
         (array_length(hll_agg_state, 1) - 2) as n_buckets
     from unnest(hll_agg_state) with ordinality as hll_agg_state_table(bucket_hash, bucket_key)
@@ -91,8 +91,8 @@ with hll_agg_state_table as (
 counted as (
     select
         MAX(hll_agg_state_table.n_buckets) as n_buckets,
-        MAX(hll_agg_state_table.n_buckets) - COUNT(hll_agg_state_table.bucket_hash) as n_zero_buckets,
-        SUM(POW(2, -1 * hll_agg_state_table.bucket_hash)) as harmonic_mean
+        MAX(hll_agg_state_table.n_buckets) - COUNT(hll_agg_state_table.most_significant_bit) as n_zero_buckets,
+        SUM(POW(2, -1 * hll_agg_state_table.most_significant_bit)) as harmonic_mean
     from hll_agg_state_table
 ),
 -- estimate
