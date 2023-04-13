@@ -23,8 +23,8 @@ declare
 begin
     -- we can only handle precision up to 11 or 2048 buckets
     -- because hashtext produces a hash of int size with 31 useable bits
-    if hll_precision < 3 or hll_precision > 11 then
-        raise exception 'invalid hll_precision: % - must be between 3 and 11 inclusive', hll_precision;
+    if hll_precision < 4 or hll_precision > 11 then
+        raise exception 'invalid hll_precision: % - must be between 4 (16 buckets) and 11 (2048 buckets) inclusive', hll_precision;
     end if;
     -- postgres squeezes null elements in the array, we don't want that,
     -- so we add a first and last element to keep a fixed size
@@ -77,49 +77,59 @@ hll_approximate(hll_agg_state int[])
 returns int
 language sql immutable as
 $$
-with hll_agg_state_table as (
+with n_buckets as (
+    select array_length(hll_agg_state, 1) - 2 as n_buckets
+),
+hll_agg_state_table as (
     select
         31 - FLOOR(LOG(2, bucket_hash)) as most_significant_bit,
-        bucket_key,
-        (array_length(hll_agg_state, 1) - 2) as n_buckets
+        bucket_key
     from unnest(hll_agg_state) with ordinality as hll_agg_state_table(bucket_hash, bucket_key)
     where bucket_hash is not null -- ignore all null elements
         and bucket_key != 1 -- ignore the first element of the array
         and bucket_key != array_length(hll_agg_state, 1) -- ignore the last element of the array
 ),
+alpha as (
+    -- alpha is a correction constant related to the number of buckets used
+    -- defined as follows:
+    select
+        case
+            when n_buckets.n_buckets = 16 then 0.673 -- for precision 4
+            when n_buckets.n_buckets = 32 then 0.697 -- for precision 5
+            when n_buckets.n_buckets = 64 then 0.709 -- for precision 6
+            else (0.7213 / (1 + 1.079 / n_buckets.n_buckets)) -- for precision >=7
+        end as alpha
+    from n_buckets
+),
 -- compute counts and aggregates
 counted as (
     select
-        MAX(hll_agg_state_table.n_buckets) as n_buckets,
-        MAX(hll_agg_state_table.n_buckets) - COUNT(hll_agg_state_table.most_significant_bit) as n_zero_buckets,
+        MAX(n_buckets.n_buckets) - COUNT(hll_agg_state_table.most_significant_bit) as n_zero_buckets,
         SUM(POW(2, -1 * hll_agg_state_table.most_significant_bit)) as harmonic_mean
-    from hll_agg_state_table
+    from hll_agg_state_table, n_buckets
 ),
 -- estimate
 estimation as (
     select
         (
-            (POW(counted.n_buckets, 2) * (0.7213 / (1 + 1.079 / counted.n_buckets))) /
-            (counted.n_zero_buckets + counted.harmonic_mean)
-        )::int as approximated_cardinality,
-        counted.n_zero_buckets,
-        counted.n_buckets
-    from counted
+            (POW(n_buckets.n_buckets, 2) * alpha.alpha) / (counted.n_zero_buckets + counted.harmonic_mean)
+        )::int as approximated_cardinality
+    from counted, n_buckets, alpha
 )
 -- correct for biases
 select
     case
-        when estimation.approximated_cardinality < 2.5 * estimation.n_buckets
-            and estimation.n_zero_buckets > 0 then (
-                (0.7213 / (1 + 1.079 / estimation.n_buckets))
+        when estimation.approximated_cardinality < 2.5 * n_buckets.n_buckets
+            and counted.n_zero_buckets > 0 then (
+                alpha.alpha
                 * (
-                    estimation.n_buckets
-                    * LOG(2, (estimation.n_buckets::numeric / estimation.n_zero_buckets)::int)
+                    n_buckets.n_buckets
+                    * LOG(2, (n_buckets.n_buckets::numeric / counted.n_zero_buckets)::int)
                 )
             )::int
         else estimation.approximated_cardinality
     end as approximated_cardinality_corrected
-from estimation
+from estimation, alpha, n_buckets, counted
 $$;
 
 -- aggregation with precision argument

@@ -84,7 +84,7 @@ list(
 {'date_of_session': datetime.date(2023, 4, 13), 'approx_unique_users': 11841}]
 ```
 
-You can also set a lower precision (down to 3) for a faster, less accurate estimate.
+You can also set a lower precision (down to 4) for a faster, less accurate estimate.
 
 The aggregation is also available in SQL:
 
