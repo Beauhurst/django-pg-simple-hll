@@ -63,7 +63,7 @@ list(
 
 The approximation is sometimes faster and uses less memory.
 
-By default, it uses a precision of 9, which tends to have an error of about 5%. You can set a higher precision (up to 11)) through a second parameter:
+By default, it uses a precision of 9, which tends to have an error of about 5%. You can set a higher precision (up to 31) through a second parameter:
 
 ```python
 list(

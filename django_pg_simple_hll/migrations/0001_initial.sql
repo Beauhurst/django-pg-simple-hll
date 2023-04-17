@@ -26,10 +26,10 @@ declare
     --  2. we have to account for an extra first element
     current_hash int := hll_agg_state[bucket_key + 2];
 begin
-    -- we can only handle precision up to 11 or 2048 buckets
+    -- we can only handle precision up to 31 or 2,147,483,648 buckets
     -- because hashtext produces a hash of int size with 31 useable bits
-    if hll_precision < 4 or hll_precision > 11 then
-        raise exception 'invalid hll_precision: % - must be between 4 (16 buckets) and 11 (2048 buckets) inclusive',
+    if hll_precision < 4 or hll_precision > 31 then
+        raise exception 'invalid hll_precision: % - must be between 4 (16 buckets) and 31 (2,147,483,648 buckets) inclusive',
             hll_precision;
     end if;
     -- postgres squeezes null elements in the array, we don't want that,
