@@ -1,14 +1,16 @@
+from collections import defaultdict
 from collections.abc import Iterable
 from math import log, sqrt
-from typing import Any
 
 import pytest
 from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django_pg_simple_hll.aggregate import ApproxCardinality
-from scipy.stats import ttest_ind
 
 from .models import Session
+
+FIELDS = ("user_int", "user_uuid", "user_str")
+PRECISIONS_TO_TEST = (5, 8, 9, 10, 11, 12)  # if tails intermittently with 4
 
 
 def _calculate_error(precision: int) -> float:
@@ -30,75 +32,60 @@ def __combine_params(
             yield (field_name, precision_value)
 
 
-def __test_id(val: Any) -> str:
-    return str(val)
-
-
 @pytest.mark.parametrize(
     ("field", "precision"),
-    __combine_params(
-        field=("user_int", "user_uuid", "user_str"),
-        precision=(5, 6, 7, 8, 9, 10, 11),  # fails intermittently with 4
-    ),
-    ids=__test_id,
+    __combine_params(field=FIELDS, precision=PRECISIONS_TO_TEST),
 )
 @pytest.mark.django_db()
 def test_total(field: str, precision: int) -> None:
-    # get 5 random records:
-    rand_sessions = list(Session.objects.values_list(field)[:5])
+    N = 10
+    # get N random records:
+    rand_sessions = list(Session.objects.values_list(field)[:N])
 
-    frequency_actual = []
-    frequency_approximated = []
+    square_difference_of_means = []
     for session in rand_sessions:
         filter = {f"{field}__lte": session[0]}
-        frequency_actual.append(
-            Session.objects.filter(**filter).aggregate(
-                unique_users=Count(field, distinct=True)
-            )["unique_users"]
+        aggregation = Session.objects.filter(**filter).aggregate(
+            unique_users=Count(field, distinct=True),
+            approx_unique_users=ApproxCardinality(field, precision),
+        )
+        square_difference_of_means.append(
+            (aggregation["unique_users"] - aggregation["approx_unique_users"]) ** 2
         )
 
-        frequency_approximated.append(
-            Session.objects.filter(**filter).aggregate(
-                approx_unique_users=ApproxCardinality(field, precision)
-            )["approx_unique_users"]
-        )
+    actual_error = sqrt(sum(square_difference_of_means) / N)
 
-    res = ttest_ind(frequency_actual, frequency_approximated)
-    # TODO: I'm not sure this is the right comparison
-    assert res.pvalue >= _calculate_error(precision)
+    assert actual_error <= _calculate_error(precision)
 
 
 @pytest.mark.parametrize(
-    ("field", "precision"),
-    __combine_params(
-        field=("user_int", "user_uuid", "user_str"),
-        precision=(5, 6, 7, 8, 9, 10, 11),  # fails intermittently with 4
-    ),
+    ("field", "precision"), __combine_params(field=FIELDS, precision=PRECISIONS_TO_TEST)
 )
 @pytest.mark.django_db()
 def test_by_date(field: str, precision: int) -> None:
-    frequency_actual = {
-        d["date_of_session"]: d["unique_users"]
-        for d in Session.objects.annotate(date_of_session=TruncDate("created"))
-        .values("date_of_session")
-        .annotate(unique_users=Count(field, distinct=True))
-        .values("unique_users", "date_of_session")
-    }
-    frequency_approximated = {
-        d["date_of_session"]: d["approx_unique_users"]
-        for d in Session.objects.annotate(date_of_session=TruncDate("created"))
-        .values("date_of_session")
-        .annotate(approx_unique_users=ApproxCardinality(field, precision))
-        .values("approx_unique_users", "date_of_session")
-    }
+    N = 10
+    # get N random records:
+    rand_sessions = list(Session.objects.values_list(field)[:N])
 
-    frequency_actual_dist, frequency_approximated_dist = zip(
-        *[
-            (frequency_actual[date], frequency_approximated[date])
-            for date in set(frequency_actual.keys())
-            | set(frequency_approximated.keys())
-        ]
-    )
-    res = ttest_ind(frequency_actual_dist, frequency_approximated_dist)
-    # TODO: I'm not sure this is the right comparison
-    assert res.pvalue >= _calculate_error(precision)
+    square_difference_of_means = defaultdict(list)
+    for session in rand_sessions:
+        filter = {f"{field}__lte": session[0]}
+
+        aggregation = (
+            Session.objects.filter(**filter)
+            .annotate(date_of_session=TruncDate("created"))
+            .values("date_of_session")
+            .annotate(
+                approx_unique_users=ApproxCardinality(field, precision),
+                unique_users=Count(field, distinct=True),
+            )
+            .values("approx_unique_users", "unique_users", "date_of_session")
+        )
+        for row in aggregation:
+            square_difference_of_means[row["date_of_session"]].append(
+                (row["unique_users"] - row["approx_unique_users"]) ** 2
+            )
+    expected_error = _calculate_error(precision)
+    for _, square_difference_of_means_for_date in square_difference_of_means.items():
+        actual_error = sqrt(sum(square_difference_of_means_for_date) / N)
+        assert actual_error <= expected_error

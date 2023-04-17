@@ -42,7 +42,6 @@ pytest = "^7.2.2"
 pytest-cov = "^4.0.0"
 pytest-django = "^4.5.2"
 ruff = "^0.0.260"
-scipy = "^1.10.1"
 
 [tool.poetry.group.debug.dependencies]
 ipdb = "^0.13.13"
@@ -74,10 +73,6 @@ show_error_codes = true
 warn_redundant_casts = true
 warn_unused_configs = true
 plugins = ["mypy_django_plugin.main"]
-
-[[tool.mypy.overrides]]
-module = ["scipy.stats"]
-ignore_missing_imports = true
 
 [tool.django-stubs]
 django_settings_module = "testapp.settings"
