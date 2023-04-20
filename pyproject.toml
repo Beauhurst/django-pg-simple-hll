@@ -42,6 +42,7 @@ pytest = "^7.2.2"
 pytest-cov = "^4.0.0"
 pytest-django = "^4.5.2"
 ruff = "^0.0.260"
+sqlfluff = "^2.0.5"
 
 [tool.poetry.group.debug.dependencies]
 ipdb = "^0.13.13"
@@ -82,3 +83,29 @@ minversion = "6.0"
 addopts = "-ra --cov"
 DJANGO_SETTINGS_MODULE = "testapp.settings"
 testpaths = ["testapp/tests.py"]
+
+[tool.sqlfluff.core]
+dialect = "postgres"
+
+[tool.sqlfluff.indentation]
+indented_joins = false
+indented_using_on = true
+template_blocks_indent = false
+
+# For rule specific configuration, use dots between the names exactly
+# as you would in .sqlfluff. In the background, SQLFluff will unpack the
+# configuration paths accordingly.
+[tool.sqlfluff.rules.capitalisation.keywords]
+capitalisation_policy = "upper"
+
+[tool.sqlfluff.rules.capitalisation.literals]
+capitalisation_policy = "upper"
+
+[tool.sqlfluff.rules.capitalisation.functions]
+capitalisation_policy = "upper"
+
+[tool.sqlfluff.rules.capitalisation.identifiers]
+capitalisation_policy = "lower"
+
+[tool.sqlfluff.rules.capitalisation.types]
+capitalisation_policy = "lower"

@@ -7,6 +7,11 @@ ruff check .
 # black
 black --check .
 
+# sqlfluff
+# TODO: Enforce linting when sqlfluff can handle postgresql aggregates
+# https://github.com/sqlfluff/sqlfluff/issues/3556
+# sqlfluff lint
+
 # docker build
 docker compose build
 
