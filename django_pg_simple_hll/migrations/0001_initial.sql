@@ -8,7 +8,7 @@
 CREATE OR REPLACE FUNCTION hll_bucket(
     hll_agg_state int [],
     input anyelement,
-    hll_precision int = 9
+    hll_precision int
 ) RETURNS int []
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE AS $$
 DECLARE
