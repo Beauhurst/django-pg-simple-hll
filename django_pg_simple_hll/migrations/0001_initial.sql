@@ -20,6 +20,8 @@ DECLARE
     bucket_hash int := hashed_input & ~(1 << 31);
     -- bucket the hash into one of n buckets
     bucket_key int := hashed_input & (n_buckets - 1);
+    -- length of current state array
+    hll_agg_state_length int := ARRAY_LENGTH(hll_agg_state, 1);
     -- pre fetch the hash for occupying the corresponding bucket for the input
     -- we add 2 because
     --  1. postgres arrays are 1-indexed
@@ -34,7 +36,7 @@ BEGIN
     END IF;
     -- postgres squeezes null elements in the array, we don't want that,
     -- so we add a first and last element to keep a fixed size
-    IF ARRAY_LENGTH(hll_agg_state, 1) < n_buckets + 2 THEN
+    IF hll_agg_state_length IS NULL OR hll_agg_state_length < (n_buckets + 2) THEN
         hll_agg_state[1] := n_buckets;
         hll_agg_state[n_buckets + 2] := n_buckets;
     END IF;
