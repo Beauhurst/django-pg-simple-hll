@@ -1,7 +1,7 @@
 -- The state transition function
 -- it takes the current state, and the two input values
 -- hll_agg_state is the current running state, made up of bucket keys and hashes
---  it is an array of n_buckets + 2
+--  it is an array of n_buckets
 -- input is the element we are considering
 -- hll_precision is the precision we are using for the approximation
 --  it use used to calculate the number of buckets
@@ -19,14 +19,12 @@ DECLARE
     -- keep all the significant bits, without the sign
     bucket_hash int := hashed_input & ~(1 << 31);
     -- bucket the hash into one of n buckets
-    bucket_key int := hashed_input & (n_buckets - 1);
+    -- we add 1 because postgres arrays are 1-indexed
+    bucket_key int := (hashed_input & (n_buckets - 1)) + 1;
     -- length of current state array
     hll_agg_state_length int := ARRAY_LENGTH(hll_agg_state, 1);
     -- pre fetch the hash for occupying the corresponding bucket for the input
-    -- we add 2 because
-    --  1. postgres arrays are 1-indexed
-    --  2. we have to account for an extra first element
-    current_hash int := hll_agg_state[bucket_key + 2];
+    current_hash int := hll_agg_state[bucket_key];
 BEGIN
     -- we can only handle precision up to 26 or 67,108,864 buckets
     -- because array size is limited to 134,217,727 (or 2^27 - 1) in postgres
@@ -34,15 +32,15 @@ BEGIN
         RAISE EXCEPTION 'invalid hll_precision: % - must be between 4 (16 buckets) and 26 (67,108,864 buckets) inclusive',
             hll_precision;
     END IF;
-    -- postgres squeezes null elements in the array, we don't want that,
-    -- so we add a first and last element to keep a fixed size
-    IF hll_agg_state_length IS NULL OR hll_agg_state_length < (n_buckets + 2) THEN
-        hll_agg_state[1] := n_buckets;
-        hll_agg_state[n_buckets + 2] := n_buckets;
+    -- postgres squeezes uninitialised elements in an array,
+    -- so we add a first and last NULL elements to keep a fixed size
+    IF hll_agg_state_length IS NULL OR hll_agg_state_length < n_buckets THEN
+        hll_agg_state[1] := COALESCE(hll_agg_state[1], NULL);
+        hll_agg_state[n_buckets] := COALESCE(hll_agg_state[n_buckets], NULL);
     END IF;
 
     IF current_hash IS NULL OR current_hash > bucket_hash THEN
-        hll_agg_state[bucket_key + 2] := bucket_hash;
+        hll_agg_state[bucket_key] := bucket_hash;
     END IF;
     RETURN hll_agg_state;
 END $$;
@@ -84,7 +82,7 @@ CREATE OR REPLACE FUNCTION hll_approximate(
 ) RETURNS int
 LANGUAGE sql IMMUTABLE AS $$
 WITH n_buckets AS (
-    SELECT ARRAY_LENGTH(hll_agg_state, 1) - 2 AS n_buckets
+    SELECT ARRAY_LENGTH(hll_agg_state, 1) AS n_buckets
 ),
 hll_agg_state_table AS (
     SELECT
@@ -92,8 +90,6 @@ hll_agg_state_table AS (
         bucket_key
     FROM UNNEST(hll_agg_state) WITH ORDINALITY AS hll_agg_state_table(bucket_hash, bucket_key)
     WHERE bucket_hash IS NOT NULL -- ignore all null elements
-        AND bucket_key != 1 -- ignore the first element of the array
-        AND bucket_key != ARRAY_LENGTH(hll_agg_state, 1) -- ignore the last element of the array
 ),
 alpha AS (
     -- alpha is a correction constant related to the number of buckets used
