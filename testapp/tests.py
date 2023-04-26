@@ -15,7 +15,7 @@ from .hyperloglog import HyperLogLog
 from .models import Group, Session
 
 FIELDS = ("user_int", "user_uuid", "user_str")
-PRECISIONS_TO_TEST = (5, 8, 9, 10, 11, 12)  # if tails intermittently with 4
+PRECISIONS_TO_TEST = (4, 5, 8, 9, 10, 11, 12)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
