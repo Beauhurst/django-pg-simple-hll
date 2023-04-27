@@ -138,7 +138,7 @@ FROM estimation, alpha, n_buckets, counted $$;
 
 
 -- aggregation with precision argument
-CREATE OR REPLACE AGGREGATE hll_approx_cardinality(anyelement, int) (
+CREATE OR REPLACE AGGREGATE hll_cardinality(anyelement, int) (
     SFUNC = hll_bucket,
     STYPE = int [],
     FINALFUNC = hll_approximate,
@@ -149,7 +149,7 @@ CREATE OR REPLACE AGGREGATE hll_approx_cardinality(anyelement, int) (
 
 
 --  aggregation with default precision argument
-CREATE OR REPLACE AGGREGATE hll_approx_cardinality(anyelement) (
+CREATE OR REPLACE AGGREGATE hll_cardinality(anyelement) (
     SFUNC = hll_bucket,
     STYPE = int [],
     FINALFUNC = hll_approximate,

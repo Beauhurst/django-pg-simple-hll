@@ -13,7 +13,7 @@ Session.objects.aggregate(unique_users=Count("user_uuid", distinct=True))
 you can approximate it,
 
 ```python
-Session.objects.aggregate(approx_unique_users=ApproxCardinality("user_uuid"))
+Session.objects.aggregate(approx_unique_users=HLLCardinality("user_uuid"))
 
 {'approx_unique_users': 76914}
 ```
@@ -47,7 +47,7 @@ list(
     Session.objects
         .annotate(date_of_session=TruncDate("created"))
         .values("date_of_session")
-        .annotate(approx_unique_users=ApproxCardinality("user_uuid"))
+        .annotate(approx_unique_users=HLLCardinality("user_uuid"))
         .values("approx_unique_users", "date_of_session")
  )
 
@@ -70,7 +70,7 @@ list(
     Session.objects
         .annotate(date_of_session=TruncDate("created"))
         .values("date_of_session")
-        .annotate(approx_unique_users=ApproxCardinality("user_uuid", 11))
+        .annotate(approx_unique_users=HLLCardinality("user_uuid", 11))
         .values("approx_unique_users", "date_of_session")
 )
 

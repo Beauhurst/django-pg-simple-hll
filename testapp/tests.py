@@ -8,7 +8,7 @@ from django.core.exceptions import FieldError
 from django.db.models import Case, F, Func, Q, When
 from django.db.models.functions import TruncDate
 from django.db.utils import ProgrammingError
-from django_pg_simple_hll.aggregate import ApproxCardinality
+from django_pg_simple_hll.aggregate import HLLCardinality
 
 from .conftest import CREATED_NOW, N_DAYS
 from .hyperloglog import HyperLogLog
@@ -72,7 +72,7 @@ def _get_reference_approximation(field: str, precision: int) -> dict[int, int]:
 def test_total(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     aggregation = Session.objects.aggregate(
-        approx_unique_users=ApproxCardinality(field, precision),
+        approx_unique_users=HLLCardinality(field, precision),
     )
 
     assert fixtures[N_DAYS - 1] == aggregation["approx_unique_users"]
@@ -83,7 +83,7 @@ def test_raises_error_without_expression() -> None:
     """Aggregation cannot be used without targetting a specific field"""
     with pytest.raises(ProgrammingError):
         Session.objects.aggregate(
-            approx_unique_users=ApproxCardinality(),
+            approx_unique_users=HLLCardinality(),
         )
 
 
@@ -92,7 +92,7 @@ def test_raises_error_with_star() -> None:
     """Aggregation cannot be used without targetting a specific field"""
     with pytest.raises(FieldError):
         Session.objects.aggregate(
-            approx_unique_users=ApproxCardinality("*"),
+            approx_unique_users=HLLCardinality("*"),
         )
 
 
@@ -106,7 +106,7 @@ def test_with_filter(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
 
     aggregation = Session.objects.aggregate(
-        approx_unique_users=ApproxCardinality(
+        approx_unique_users=HLLCardinality(
             field,
             precision,
             filter=Q(created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)),
@@ -127,7 +127,7 @@ def test_implicit_join(field: str, precision: int) -> None:
     aggregation = Group.objects.filter(
         created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)
     ).aggregate(
-        approx_unique_users=ApproxCardinality(f"sessions__{field}", precision),
+        approx_unique_users=HLLCardinality(f"sessions__{field}", precision),
     )
     assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
 
@@ -148,7 +148,7 @@ def test_with_expression(field: str, precision: int) -> None:
         )
     )  # Works since NULLs aren't counted
     aggregation = Session.objects.aggregate(
-        approx_unique_users=ApproxCardinality(expression, precision),
+        approx_unique_users=HLLCardinality(expression, precision),
     )
     assert fixtures[days_for_expression] == aggregation["approx_unique_users"]
 
@@ -164,7 +164,7 @@ def test_by_date(field: str, precision: int) -> None:
         Session.objects.annotate(date_of_session=TruncDate("created"))
         .values("date_of_session")
         .annotate(
-            approx_unique_users=ApproxCardinality(field, precision),
+            approx_unique_users=HLLCardinality(field, precision),
         )
         .values("approx_unique_users", "date_of_session")
         .order_by("date_of_session")
