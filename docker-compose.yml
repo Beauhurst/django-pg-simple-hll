@@ -20,6 +20,7 @@ services:
     build:
       context: .
       args:
+        DJANGO_VERSION: ${DJANGO_VERSION}
         PYTHON_IMAGE_TAG: ${PYTHON_IMAGE_TAG}
       dockerfile: Dockerfile
     depends_on:

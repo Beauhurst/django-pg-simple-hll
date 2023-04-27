@@ -14,6 +14,7 @@ jobs:
       matrix:
         python-version: ["3.9", "3.10", "3.11"]
         postgres-version: ["12", "13", "14", "15"]
+        django-version: ["3.2", "4.0", "4.1", "4.2"]
 
     steps:
       - uses: actions/checkout@v3
@@ -32,4 +33,6 @@ jobs:
         env:
           POSTGRES_VERSION: ${{ matrix.postgres-version }}
           PYTHON_IMAGE_TAG: "${{ matrix.python-version }}-slim"
-        run: poetry run ./run-tests.sh
+          DJANGO_VERSION: "${{ matrix.django-version }}"
+        run: |
+          docker compose run --build  testapp "./run-tests.sh"

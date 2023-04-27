@@ -19,9 +19,14 @@ COPY ./testapp /code/testapp
 RUN --mount=type=cache,target=/root/.cache \
     pip install --upgrade --no-cache-dir --quiet pip setuptools wheel poetry
 
+ARG DJANGO_VERSION="4.2.0"
+
 RUN poetry config virtualenvs.in-project true \
-    && poetry install --with=dev --no-interaction
+    && poetry add django@~${DJANGO_VERSION} \
+    && poetry install --with dev --no-interaction
 
 ENV PATH="/code/.venv/bin:$PATH"
 
-CMD ["pytest"]
+COPY ./run-tests.sh run-tests.sh
+
+CMD ["./run-tests.sh"]

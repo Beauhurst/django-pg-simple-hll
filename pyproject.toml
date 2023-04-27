@@ -34,6 +34,9 @@ python = ">=3.9,<3.12"
 Django = ">=3.2.4"
 psycopg2 = "^2.9.6"
 
+[tool.poetry.group.dev]
+optional = true
+
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
 django-stubs = "^1.16.0"
@@ -43,6 +46,9 @@ pytest-cov = "^4.0.0"
 pytest-django = "^4.5.2"
 ruff = "^0.0.260"
 sqlfluff = "^2.0.5"
+
+[tool.poetry.group.debug]
+optional = true
 
 [tool.poetry.group.debug.dependencies]
 ipdb = "^0.13.13"
