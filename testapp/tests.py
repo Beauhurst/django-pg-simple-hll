@@ -21,6 +21,11 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 class HashText(Func):
+    """
+    HASHING function (any field to unsigned int 32)
+    in order to use in the python HLL implementation
+    """
+
     template = "HASHTEXT(%(expressions)s::text) & ~(1 << 31)"
 
 
