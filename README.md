@@ -1,315 +1,355 @@
 # django_pg_simple_hll
 
-Postgres only approximated cardinality aggregation for the Django ORM.
+Postgres-only HyperLogLog cardinality aggregation for the Django ORM.
 
 Instead of counting the number of distinct users,
 
 ```python
+%%time
 Session.objects.aggregate(unique_users=Count("user_uuid", distinct=True))
 
-{'unique_users': 71287}
+CPU times: user 864 µs, sys: 2.46 ms, total: 3.32 ms
+Wall time: 461 ms
+{'unique_users': 140000}
 ```
 
 you can approximate it,
 
 ```python
+%%time
 Session.objects.aggregate(approx_unique_users=HLLCardinality("user_uuid"))
 
-{'approx_unique_users': 76914}
+CPU times: user 480 µs, sys: 1.54 ms, total: 2.02 ms
+Wall time: 845 ms
+{'approx_unique_users': 144594}
 ```
 
 Or, instead of counting the number of distinct users per day,
 
 ```python
+%%time
 list(
     Session.objects
         .annotate(date_of_session=TruncDate("created"))
         .values("date_of_session")
         .annotate(unique_users=Count("user_uuid", distinct=True))
         .values("unique_users", "date_of_session")
+        .order_by("date_of_session")
 )
 
-[{'date_of_session': datetime.date(2023, 4, 6), 'unique_users': 15292},
- {'date_of_session': datetime.date(2023, 4, 7), 'unique_users': 15289},
- {'date_of_session': datetime.date(2023, 4, 8), 'unique_users': 15395},
- {'date_of_session': datetime.date(2023, 4, 9), 'unique_users': 15484},
- {'date_of_session': datetime.date(2023, 4, 10), 'unique_users': 15315},
- {'date_of_session': datetime.date(2023, 4, 11), 'unique_users': 15346},
- {'date_of_session': datetime.date(2023, 4, 12), 'unique_users': 11791},
- {'date_of_session': datetime.date(2023, 4, 13), 'unique_users': 11672}]
+CPU times: user 1.47 ms, sys: 3.16 ms, total: 4.64 ms
+Wall time: 758 ms
+[{'date_of_session': datetime.date(2023, 4, 28), 'unique_users': 20000},
+ {'date_of_session': datetime.date(2023, 4, 29), 'unique_users': 40000},
+ {'date_of_session': datetime.date(2023, 4, 30), 'unique_users': 60000},
+ {'date_of_session': datetime.date(2023, 5, 1), 'unique_users': 80000},
+ {'date_of_session': datetime.date(2023, 5, 2), 'unique_users': 100000},
+ {'date_of_session': datetime.date(2023, 5, 3), 'unique_users': 120000},
+ {'date_of_session': datetime.date(2023, 5, 4), 'unique_users': 140000}]
 ```
 
 you can approximate it,
 
 ```python
-
+%%time
 list(
     Session.objects
         .annotate(date_of_session=TruncDate("created"))
         .values("date_of_session")
         .annotate(approx_unique_users=HLLCardinality("user_uuid"))
         .values("approx_unique_users", "date_of_session")
- )
+        .order_by("date_of_session")
+)
 
- [{'date_of_session': datetime.date(2023, 4, 6), 'approx_unique_users': 15214},
- {'date_of_session': datetime.date(2023, 4, 7), 'approx_unique_users': 15686},
- {'date_of_session': datetime.date(2023, 4, 8), 'approx_unique_users': 15597},
- {'date_of_session': datetime.date(2023, 4, 9), 'approx_unique_users': 16056},
- {'date_of_session': datetime.date(2023, 4, 10), 'approx_unique_users': 15765},
- {'date_of_session': datetime.date(2023, 4, 11), 'approx_unique_users': 16620},
- {'date_of_session': datetime.date(2023, 4, 12), 'approx_unique_users': 12395},
- {'date_of_session': datetime.date(2023, 4, 13), 'approx_unique_users': 13029}]
+CPU times: user 1.53 ms, sys: 3.57 ms, total: 5.1 ms
+Wall time: 838 ms
+[{'date_of_session': datetime.date(2023, 4, 28), 'approx_unique_users': 19322},
+ {'date_of_session': datetime.date(2023, 4, 29), 'approx_unique_users': 39356},
+ {'date_of_session': datetime.date(2023, 4, 30), 'approx_unique_users': 61202},
+ {'date_of_session': datetime.date(2023, 5, 1), 'approx_unique_users': 80917},
+ {'date_of_session': datetime.date(2023, 5, 2), 'approx_unique_users': 102914},
+ {'date_of_session': datetime.date(2023, 5, 3), 'approx_unique_users': 125637},
+ {'date_of_session': datetime.date(2023, 5, 4), 'approx_unique_users': 144594}]
 ```
 
-The approximation is sometimes faster and uses less memory.
+The approximation is sometimes faster and uses less memory, particularly when faceting by other variables.
 
 By default, it uses a precision of 9, which tends to have an error of about 5%. You can set a higher precision (up to 26) through a second parameter:
 
 ```python
+%%time
 list(
     Session.objects
         .annotate(date_of_session=TruncDate("created"))
         .values("date_of_session")
         .annotate(approx_unique_users=HLLCardinality("user_uuid", 11))
         .values("approx_unique_users", "date_of_session")
+        .order_by("date_of_session")
 )
 
-[{'date_of_session': datetime.date(2023, 4, 6), 'approx_unique_users': 15430},
-{'date_of_session': datetime.date(2023, 4, 7), 'approx_unique_users': 15261},
-{'date_of_session': datetime.date(2023, 4, 8), 'approx_unique_users': 15739},
-{'date_of_session': datetime.date(2023, 4, 9), 'approx_unique_users': 15357},
-{'date_of_session': datetime.date(2023, 4, 10), 'approx_unique_users': 15511},
-{'date_of_session': datetime.date(2023, 4, 11), 'approx_unique_users': 15117},
-{'date_of_session': datetime.date(2023, 4, 12), 'approx_unique_users': 11658},
-{'date_of_session': datetime.date(2023, 4, 13), 'approx_unique_users': 11841}]
+CPU times: user 1.71 ms, sys: 3.82 ms, total: 5.53 ms
+Wall time: 1.98 s
+[{'date_of_session': datetime.date(2023, 4, 28), 'approx_unique_users': 20013},
+ {'date_of_session': datetime.date(2023, 4, 29), 'approx_unique_users': 39616},
+ {'date_of_session': datetime.date(2023, 4, 30), 'approx_unique_users': 59312},
+ {'date_of_session': datetime.date(2023, 5, 1), 'approx_unique_users': 81278},
+ {'date_of_session': datetime.date(2023, 5, 2), 'approx_unique_users': 101880},
+ {'date_of_session': datetime.date(2023, 5, 3), 'approx_unique_users': 122343},
+ {'date_of_session': datetime.date(2023, 5, 4), 'approx_unique_users': 141375}]
 ```
 
 You can also set a lower precision (down to 4) for a faster, less accurate estimate.
 
-The aggregation is also available in SQL:
+```python
+%%time
+list(
+    Session.objects
+        .annotate(date_of_session=TruncDate("created"))
+        .values("date_of_session")
+        .annotate(approx_unique_users=HLLCardinality("user_uuid", 7))
+        .values("approx_unique_users", "date_of_session")
+        .order_by("date_of_session")
+)
+
+CPU times: user 1.3 ms, sys: 2.85 ms, total: 4.15 ms
+Wall time: 547 ms
+[{'date_of_session': datetime.date(2023, 4, 28), 'approx_unique_users': 19363},
+ {'date_of_session': datetime.date(2023, 4, 29), 'approx_unique_users': 40627},
+ {'date_of_session': datetime.date(2023, 4, 30), 'approx_unique_users': 63159},
+ {'date_of_session': datetime.date(2023, 5, 1), 'approx_unique_users': 83371},
+ {'date_of_session': datetime.date(2023, 5, 2), 'approx_unique_users': 96185},
+ {'date_of_session': datetime.date(2023, 5, 3), 'approx_unique_users': 116565},
+ {'date_of_session': datetime.date(2023, 5, 4), 'approx_unique_users': 143588}]
+```
+
+The aggregation is also available in SQL for analytics:
 
 ```sql
 
 select
     date_trunc('day', created) as date_of_session,
-    hll_approx_cardinality(user_uuid, 11) as approx_unique_users
+    hll_cardinality(user_uuid, 11) as approx_unique_users
 from
     testapp_session
 group by
-    date_trunc('day', created);
+    date_trunc('day', created)
+order by date_of_session;
+
     date_of_session     | approx_unique_users
 ------------------------+---------------------
- 2023-04-06 00:00:00+00 |               15430
- 2023-04-07 00:00:00+00 |               15261
- 2023-04-08 00:00:00+00 |               15739
- 2023-04-09 00:00:00+00 |               15357
- 2023-04-10 00:00:00+00 |               15511
- 2023-04-11 00:00:00+00 |               15117
- 2023-04-12 00:00:00+00 |               11658
- 2023-04-13 00:00:00+00 |               11841
-(8 rows)
+ 2023-04-28 00:00:00+00 |               20013
+ 2023-04-29 00:00:00+00 |               39616
+ 2023-04-30 00:00:00+00 |               59312
+ 2023-05-01 00:00:00+00 |               81278
+ 2023-05-02 00:00:00+00 |              101880
+ 2023-05-03 00:00:00+00 |              122343
+ 2023-05-04 00:00:00+00 |              141375
+(7 rows)
 
-Time: 1289.249 ms (00:01.289)
+Time: 2121.662 ms (00:02.122)
 ```
 
 ## SQL implementation
 
 This is a low-privilege implementation of [Hyperloglog](https://www.lix.polytechnique.fr/~fusy/Articles/FlFuGaMe07.pdf) approximate cardinality aggregation written in SQL and some [PL/pgSQL](https://www.postgresql.org/docs/current/plpgsql.html). Read about it [here](http://alejandro.giacometti.me/2023-03-30/hyperloglog-in-sql/),
 
+## Should I use this?
+
+If you can use [an optimised version](https://github.com/citusdata/postgresql-hll), you should use that. It will be faster - although I haven't done any benchmarks.
+
+Use this if you can't install extensions on your database, such as on [Amazon RDS](https://aws.amazon.com/rds/).
+
 ## Performance
 
-This is not a scientific test, but here is an example of performance:
+This is not a scientific test, but here is an example of performance running on an M1 Macbook Pro, running Postgres 14 in Docker.
 
-For a dataset of 125k a precision of 6 matches the speed of `COUNT(DISTINCT ...)`:
+For a dataset of 560k rows and 140k unique values a precision of 6 matches the speed of `COUNT(DISTINCT ...)`:
 
 ```sql
 
 select count(user_uuid) from testapp_session;
  count
 --------
- 125000
+ 560000
 (1 row)
 
-Time: 31.401 ms
+Time: 115.919 ms
 
 select count(distinct user_uuid) as unique_users from testapp_session;
  unique_users
 --------------
-        71498
+       140000
 (1 row)
 
-Time: 176.382 ms
+Time: 434.234 ms
 
-select hll_approx_cardinality(user_uuid, 6) as approx_unique_users from testapp_session;
+select hll_cardinality(user_uuid, 6) as approx_unique_users from testapp_session;
+  approx_unique_users
+---------------------
+              136260
+(1 row)
+
+Time: 409.562 ms
+
+select hll_cardinality(user_uuid, 11) as approx_unique_users from testapp_session;
  approx_unique_users
 ---------------------
-               77215
+              141375
 (1 row)
 
-Time: 174.439 ms
-
-select hll_approx_cardinality(user_uuid, 11) as approx_unique_users from testapp_session;
- approx_unique_users
----------------------
-               74614
-(1 row)
-
-Time: 502.541 ms
-
+Time: 1309.422 ms (00:01.309)
 ```
 
-For a dataset of 1.25M:
+For a dataset of 5.6M rows and 1.4M unique values:
 
-- a precision of 8 is about 60% faster than `COUNT(DISTINCT ...)`
-- a precision 9 roughly matches the speed of `COUNT(DISTINCT ...)`
+- with a precision of 7, `hll_aggregate` runs in about 0.79x the speed of `COUNT(DISTINCT ...)`
+- with a precision of 8, it roughly matches (0.94x)
 
 ```sql
-
 select count(user_uuid) from testapp_session;
   count
 ---------
- 1250000
+ 5600000
 (1 row)
 
-Time: 212.952 ms
+Time: 6021.708 ms (00:06.022)
 
 select count(distinct user_uuid) as unique_users from testapp_session;
  unique_users
 --------------
-       713161
+      1400000
 (1 row)
 
-Time: 1287.163 ms (00:01.287)
+Time: 5414.085 ms (00:05.414)
 
-select hll_approx_cardinality(user_uuid, 8) as approx_unique_users from testapp_session;
+select hll_cardinality(user_uuid, 7) as approx_unique_users from
  approx_unique_users
 ---------------------
-              734585
+             1308235
 (1 row)
 
-Time: 777.405 ms
+Time: 4308.065 ms (00:04.308)
 
-select hll_approx_cardinality(user_uuid, 9) as approx_unique_users from testapp_session;
+select hll_cardinality(user_uuid, 8) as approx_unique_users from testapp_session;
  approx_unique_users
 ---------------------
-              757331
+             1407331
 (1 row)
 
-Time: 1109.805 ms (00:01.110)
+Time: 5083.205 ms (00:05.083)
 
-select hll_approx_cardinality(user_uuid, 11) as approx_unique_users from testapp_session;
+select hll_cardinality(user_uuid, 11) as approx_unique_users from testapp_session;
  approx_unique_users
 ---------------------
-              708123
+             1390983
 (1 row)
 
-Time: 2681.318 ms (00:02.681)
-
+Time: 12468.054 ms (00:12.468)
 ```
 
-For a dataset of 12.5M:
+For a dataset of 56M rows and 14M unique values:
 
-- a precision of 8 is about 100% faster than `COUNT(DISTINCT ...)`
-- a precision of 9 is about 60% faster than `COUNT(DISTINCT ...)`
-- a precision 10 roughly matches the speed of `COUNT(DISTINCT ...)`
+- with a precision of 8, `hll_aggregate` runs in about 0.68x the speed of `COUNT(DISTINCT ...)`
+- with a precision of 9, it runs in about 0.76x
+- with a precision of 10, it runs in about 0.87x
+- with a precision of 11 ,it runs in about 1.10x
 
 ```sql
 
 select count(user_uuid) from testapp_session;
   count
 ----------
- 12500000
+ 56000000
 (1 row)
 
-Time: 2093.473 ms (00:02.093)
+Time: 86902.105 ms (01:26.902)93)
 
 select count(distinct user_uuid) as unique_users from testapp_session;
  unique_users
 --------------
-      7134576
+     14000000
 (1 row)
 
-Time: 16944.364 ms (00:16.944)
+Time: 145953.595 ms (02:25.954)
 
-select hll_approx_cardinality(user_uuid, 8) as approx_unique_users from testapp_session;
+select hll_cardinality(user_uuid, 8) as approx_unique_users from testapp_session;
  approx_unique_users
 ---------------------
-             8494117
+            13469591
 (1 row)
 
-Time: 8599.141 ms (00:08.599)
+Time: 99688.330 ms (01:39.688)
 
-select hll_approx_cardinality(user_uuid, 9) as approx_unique_users from testapp_session;
+select hll_cardinality(user_uuid, 9) as approx_unique_users from testapp_session;
  approx_unique_users
 ---------------------
-             8154493
+            13028181
 (1 row)
 
-Time: 10642.760 ms (00:10.643)
+Time: 111210.513 ms (01:51.211)
 
-select hll_approx_cardinality(user_uuid, 10) as approx_unique_users from testapp_session;
+select hll_cardinality(user_uuid, 10) as approx_unique_users from testapp_session;
  approx_unique_users
 ---------------------
-             7768230
+            13147406
 (1 row)
 
-Time: 14647.500 ms (00:14.647)
+Time: 126465.312 ms (02:06.465)
 
-select hll_approx_cardinality(user_uuid, 11) as approx_unique_users from testapp_session;
+hll_cardinality(user_uuid, 11) as approx_unique_users from testapp_session;
  approx_unique_users
 ---------------------
-             7447066
+            13363203
 (1 row)
 
-Time: 23068.642 ms (00:23.069)
+Time: 160958.580 ms (02:40.959)
 ```
 
 The real advantage though is in combination with other properties:
 
-E.g. this query is about 380% faster:
+E.g. this query runs 0.37x quicker if using `hll_aggregate` than with `COUNT(DISTINCT ...)`:
 
 ```sql
-
 select
-    date_trunc('day', created) as date_of_session,
-    count(distinct user_uuid) as unique_users
-from
-    testapp_session
+  date_trunc('day', created) as date_of_session,
+  count(distinct user_uuid) as unique_users
+from testapp_session
 group by
-    date_trunc('day', created);
+  date_trunc('day', created)
+order by
+  date_of_session;
     date_of_session     | unique_users
 ------------------------+--------------
- 2023-04-06 00:00:00+00 |      1535903
- 2023-04-07 00:00:00+00 |      1535558
- 2023-04-08 00:00:00+00 |      1532815
- 2023-04-09 00:00:00+00 |      1536498
- 2023-04-10 00:00:00+00 |      1534280
- 2023-04-11 00:00:00+00 |      1535005
- 2023-04-12 00:00:00+00 |      1175794
- 2023-04-13 00:00:00+00 |      1174328
-(8 rows)
+ 2023-04-28 00:00:00+00 |      2000000
+ 2023-04-29 00:00:00+00 |      4000000
+ 2023-04-30 00:00:00+00 |      6000000
+ 2023-05-01 00:00:00+00 |      8000000
+ 2023-05-02 00:00:00+00 |     10000000
+ 2023-05-03 00:00:00+00 |     12000000
+ 2023-05-04 00:00:00+00 |     14000000
+(7 rows)
 
-Time: 44780.758 ms (00:44.781)
-
+Time: 296766.361 ms (04:56.766)
 
 select
-    date_trunc('day', created) as date_of_session,
-    hll_approx_cardinality(user_uuid, 9) as unique_users
+  date_trunc('day', created) as date_of_session,
+  hll_cardinality(user_uuid, 9) as unique_users
 from
-    testapp_session
+  testapp_session
 group by
-    date_trunc('day', created);
+  date_trunc('day', created)
+order by
+  date_of_session;
     date_of_session     | unique_users
 ------------------------+--------------
- 2023-04-06 00:00:00+00 |      1509097
- 2023-04-07 00:00:00+00 |      1478254
- 2023-04-08 00:00:00+00 |      1734274
- 2023-04-09 00:00:00+00 |      1570385
- 2023-04-10 00:00:00+00 |      1575785
- 2023-04-11 00:00:00+00 |      1529300
- 2023-04-12 00:00:00+00 |      1241961
- 2023-04-13 00:00:00+00 |      1131402
-(8 rows)
+ 2023-04-28 00:00:00+00 |      1963972
+ 2023-04-29 00:00:00+00 |      4096876
+ 2023-04-30 00:00:00+00 |      5869339
+ 2023-05-01 00:00:00+00 |      7412843
+ 2023-05-02 00:00:00+00 |      9401010
+ 2023-05-03 00:00:00+00 |     11443836
+ 2023-05-04 00:00:00+00 |     13028181
+(7 rows)
 
-Time: 12430.238 ms (00:12.430)
+Time: 110217.665 ms (01:50.218)
 ```
