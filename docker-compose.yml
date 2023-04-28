@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:${POSTGRES_VERSION}
+    volumes:
+      - ./.local-data/db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_NAME: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_USER: "postgres"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
+  testapp:
+    image: testapp
+    build:
+      context: .
+      args:
+        DJANGO_VERSION: ${DJANGO_VERSION}
+        PYTHON_IMAGE_TAG: ${PYTHON_IMAGE_TAG}
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      POSTGRES_HOST: "db"
+      POSTGRES_NAME: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_USER: "postgres"
+      POSTGRES_PORT: "5432"

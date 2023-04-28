@@ -1,0 +1,116 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "django_pg_simple_hll"
+version = "0.0.1"
+description = "A low-privilege implementation of hyperloglog for django and postgres"
+authors = ["Beauhurst <dev@beauhurst.com>"]
+license = "MIT"
+readme = "README.md"
+classifiers = [
+  "Environment :: Web Environment",
+  "Framework :: Django",
+  "Framework :: Django :: 3.2",
+  "Framework :: Django :: 4.0",
+  "Framework :: Django :: 4.1",
+  "Framework :: Django :: 4.2",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3 :: Only",
+]
+packages = [
+  { include = "django_pg_simple_hll" },
+  { include = "django_pg_simple_hll/py.typed" },
+]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.12"
+Django = ">=3.2.4"
+psycopg2 = "^2.9.6"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+django-stubs = "^1.16.0"
+mypy = "^1.1.1"
+pytest = "^7.2.2"
+pytest-cov = "^4.0.0"
+pytest-django = "^4.5.2"
+ruff = "^0.0.260"
+sqlfluff = "^2.0.5"
+
+[tool.poetry.group.debug]
+optional = true
+
+[tool.poetry.group.debug.dependencies]
+ipdb = "^0.13.13"
+ipython = "^8.12.0"
+
+[tool.ruff]
+target-version = "py39"
+select = ["B", "COM819", "C4", "E", "F", "I", "PT", "Q", "UP", "W"]
+ignore = ["E501"]
+# Avoid trying to fix flake8-bugbear (`B`) violations.
+unfixable = ["B"]
+extend-exclude = [".venv", ".direnv", ".git", "__pycache__", "build", "dist"]
+src = ["django_pg_simple_hll", "testapp"]
+
+[tool.ruff.mccabe]
+max-complexity = 12
+
+[tool.ruff.flake8-quotes]
+docstring-quotes = "double"
+
+[tool.ruff.isort]
+combine-as-imports = true
+
+[tool.mypy]
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_configs = true
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "testapp.settings"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra --cov"
+DJANGO_SETTINGS_MODULE = "testapp.settings"
+testpaths = ["testapp/tests.py"]
+
+[tool.sqlfluff.core]
+dialect = "postgres"
+
+[tool.sqlfluff.indentation]
+indented_joins = false
+indented_using_on = true
+template_blocks_indent = false
+
+# For rule specific configuration, use dots between the names exactly
+# as you would in .sqlfluff. In the background, SQLFluff will unpack the
+# configuration paths accordingly.
+[tool.sqlfluff.rules.capitalisation.keywords]
+capitalisation_policy = "upper"
+
+[tool.sqlfluff.rules.capitalisation.literals]
+capitalisation_policy = "upper"
+
+[tool.sqlfluff.rules.capitalisation.functions]
+capitalisation_policy = "upper"
+
+[tool.sqlfluff.rules.capitalisation.identifiers]
+capitalisation_policy = "lower"
+
+[tool.sqlfluff.rules.capitalisation.types]
+capitalisation_policy = "lower"
