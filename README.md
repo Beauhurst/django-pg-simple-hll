@@ -252,7 +252,7 @@ For a dataset of 56M rows and 14M unique values:
 - with a precision of 8, `hll_aggregate` runs in about 0.68x the speed of `COUNT(DISTINCT ...)`
 - with a precision of 9, it runs in about 0.76x
 - with a precision of 10, it runs in about 0.87x
-- with a precision of 11 ,it runs in about 1.10x
+- with a precision of 11, it runs in about 1.10x
 
 ```sql
 
