@@ -8,7 +8,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    name: "CI | python v${{ matrix.python-version }}, postgres v${{ matrix.postgres-version }}"
+    name: "CI | python v${{ matrix.python-version }}, django v${{matrix.django-version}}, postgres v${{ matrix.postgres-version }}"
     strategy:
       fail-fast: false
       matrix:
