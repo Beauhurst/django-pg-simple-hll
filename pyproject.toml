@@ -4,9 +4,9 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "django_pg_simple_hll"
-version = "0.0.1"
+version = "0.1.0"
 description = "A low-privilege implementation of hyperloglog for django and postgres"
-authors = ["Beauhurst <dev@beauhurst.com>"]
+authors = ["Beauhurst <opensource@beauhurst.com>"]
 license = "MIT"
 readme = "README.md"
 classifiers = [
