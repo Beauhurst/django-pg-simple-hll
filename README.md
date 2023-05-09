@@ -149,9 +149,29 @@ order by date_of_session;
 Time: 2121.662 ms (00:02.122)
 ```
 
-## SQL implementation
+## How to use
 
-This is a low-privilege implementation of [Hyperloglog](https://www.lix.polytechnique.fr/~fusy/Articles/FlFuGaMe07.pdf) approximate cardinality aggregation written in SQL and some [PL/pgSQL](https://www.postgresql.org/docs/current/plpgsql.html). Read about it [here](http://alejandro.giacometti.me/2023-03-30/hyperloglog-in-sql/),
+Install the package:
+
+```sh
+pip install django-pg-simple-hll
+```
+
+Add it to your Django `INSTALLED_APPS`:
+
+```python
+INSTALLED_APPS = [
+    ...
+    "django_pg_simple_hll",
+    ...
+]
+```
+
+Run migrations
+
+```sh
+django-admin migrate django_pg_simple_hll
+```
 
 ## Should I use this?
 
@@ -159,9 +179,13 @@ If you can use [an optimised version](https://github.com/citusdata/postgresql-hl
 
 Use this if you can't install extensions on your database, such as on [Amazon RDS](https://aws.amazon.com/rds/).
 
-## Performance
+## Notes on SQL implementation
 
-This is not a scientific test, but here is an example of performance running on an M1 Macbook Pro, running Postgres 14 in Docker.
+This is a low-privilege implementation of [Hyperloglog](https://www.lix.polytechnique.fr/~fusy/Articles/FlFuGaMe07.pdf) approximate cardinality aggregation written in SQL and some [PL/pgSQL](https://www.postgresql.org/docs/current/plpgsql.html). Read about it [here](http://alejandro.giacometti.me/2023-03-30/hyperloglog-in-sql/),
+
+## Notes on Performance
+
+This is not a scientific test, but here is an example of performance running on an M1 MacBook Pro, running Postgres 14 in Docker.
 
 For a dataset of 560k rows and 140k unique values a precision of 6 matches the speed of `COUNT(DISTINCT ...)`:
 
