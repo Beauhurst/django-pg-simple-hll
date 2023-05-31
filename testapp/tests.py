@@ -37,13 +37,16 @@ def _get_reference_approximation(field: str, precision: int) -> dict[int, int]:
         timestamp = CREATED_NOW + timedelta(days=day_of_week + 2)
         query = (
             Session.objects.filter(created__lt=timestamp)
-            .annotate(hash=HLLHash(F(field)))
-            .values("hash")
+            .annotate(raw=F(field), hash=HLLHash(F(field)))
+            .values("hash", "raw")
         )
 
         hll = HyperLogLog(precision)
         for s in query:
-            hll.add(s["hash"])
+            if field == "user_hash":
+                hll.add(s["raw"])
+            else:
+                hll.add(s["hash"])
 
         fixtures[day_of_week] = int(hll.cardinality())
 
@@ -81,6 +84,17 @@ def test_hll_cardinality_from_hash_total(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     aggregation = Session.objects.aggregate(
         approx_unique_users=HLLCardinalityFromHash(HLLHash(field), precision),
+    )
+
+    assert fixtures[N_DAYS - 1] == aggregation["approx_unique_users"]
+
+
+@pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
+@pytest.mark.django_db()
+def test_hll_cardinality_from_hash_pre_hashed_total(precision: int) -> None:
+    fixtures = _get_reference_approximation("user_hash", precision)
+    aggregation = Session.objects.aggregate(
+        approx_unique_users=HLLCardinalityFromHash("user_hash", precision),
     )
 
     assert fixtures[N_DAYS - 1] == aggregation["approx_unique_users"]
@@ -194,6 +208,22 @@ def test_hll_cardinality_from_hash_with_filter(field: str, precision: int) -> No
     assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
 
 
+@pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
+@pytest.mark.django_db()
+def test_hll_cardinality_from_hash_pre_hashed_with_filter(precision: int) -> None:
+    days_for_filter = 2
+    fixtures = _get_reference_approximation("user_hash", precision)
+
+    aggregation = Session.objects.aggregate(
+        approx_unique_users=HLLCardinalityFromHash(
+            "user_hash",
+            precision,
+            filter=Q(created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)),
+        ),
+    )
+    assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
+
+
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
 @pytest.mark.django_db()
 def test_hll_cardinality_implicit_join(field: str, precision: int) -> None:
@@ -220,6 +250,20 @@ def test_hll_cardinality_from_hash_implicit_join(field: str, precision: int) -> 
         approx_unique_users=HLLCardinalityFromHash(
             HLLHash(f"sessions__{field}"), precision
         ),
+    )
+    assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
+
+
+@pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
+@pytest.mark.django_db()
+def test_hll_cardinality_from_hash_pre_hashed_implicit_join(precision: int) -> None:
+    fixtures = _get_reference_approximation("user_hash", precision)
+    days_for_filter = 4
+
+    aggregation = Group.objects.filter(
+        created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)
+    ).aggregate(
+        approx_unique_users=HLLCardinalityFromHash("sessions__user_hash", precision),
     )
     assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
 
@@ -260,6 +304,24 @@ def test_hll_cardinality_from_hash_with_expression(field: str, precision: int) -
     assert fixtures[days_for_expression] == aggregation["approx_unique_users"]
 
 
+@pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
+@pytest.mark.django_db()
+def test_hll_cardinality_from_hash_pre_hashed_with_expression(precision: int) -> None:
+    fixtures = _get_reference_approximation("user_hash", precision)
+    days_for_expression = 3
+
+    expression = Case(
+        When(
+            created__lt=CREATED_NOW + timedelta(days=days_for_expression + 2),
+            then=F("user_hash"),
+        )
+    )  # Works since NULLs aren't counted
+    aggregation = Session.objects.aggregate(
+        approx_unique_users=HLLCardinalityFromHash(expression, precision),
+    )
+    assert fixtures[days_for_expression] == aggregation["approx_unique_users"]
+
+
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
 @pytest.mark.django_db()
 def test_hll_cardinality_by_date(field: str, precision: int) -> None:
@@ -288,6 +350,24 @@ def test_hll_cardinality_from_hash_by_date(field: str, precision: int) -> None:
         .values("date_of_session")
         .annotate(
             approx_unique_users=HLLCardinalityFromHash(HLLHash(field), precision),
+        )
+        .values("approx_unique_users", "date_of_session")
+        .order_by("date_of_session")
+    )
+    for i, row in enumerate(aggregation):
+        assert fixtures[i] == row["approx_unique_users"]
+
+
+@pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
+@pytest.mark.django_db()
+def test_hll_cardinality_from_hash_pre_hashed_by_date(precision: int) -> None:
+    fixtures = _get_reference_approximation("user_hash", precision)
+
+    aggregation = (
+        Session.objects.annotate(date_of_session=TruncDate("created"))
+        .values("date_of_session")
+        .annotate(
+            approx_unique_users=HLLCardinalityFromHash("user_hash", precision),
         )
         .values("approx_unique_users", "date_of_session")
         .order_by("date_of_session")
