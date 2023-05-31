@@ -1,19 +1,6 @@
-from pathlib import Path
-
 from django.db import migrations
 
-
-def load_sql(reverse: bool = False) -> str:
-    this = Path(__file__)
-    parent = this.parent
-    stem = this.stem
-    if reverse:
-        filename = f"{stem}.reverse.sql"
-    else:
-        filename = f"{stem}.sql"
-
-    with open(parent / filename) as sql_file:
-        return sql_file.read()
+from . import load_sql
 
 
 class Migration(migrations.Migration):
@@ -21,4 +8,8 @@ class Migration(migrations.Migration):
 
     dependencies = []
 
-    operations = [migrations.RunSQL(sql=load_sql(), reverse_sql=load_sql(reverse=True))]
+    operations = [
+        migrations.RunSQL(
+            sql=load_sql(__file__), reverse_sql=load_sql(__file__, reverse=True)
+        )
+    ]
