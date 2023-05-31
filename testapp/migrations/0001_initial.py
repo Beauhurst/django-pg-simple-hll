@@ -9,9 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     initial = True
 
-    dependencies = [
-        ("django_pg_simple_hll", "0001_initial"),
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
