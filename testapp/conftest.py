@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 from hashlib import blake2s
+from itertools import islice
 from random import randint
 from typing import Any
 from uuid import UUID
@@ -14,7 +15,7 @@ CREATED_NOW = now().replace(hour=0, minute=0, second=0, microsecond=0)
 N_USER_IDS = 140_000
 N_DAYS = 7
 
-DB_BATCH_SIZE = 1_000
+DB_BATCH_SIZE = 2_500
 
 
 def uuid_hash_31bit(id: UUID) -> int:
@@ -27,7 +28,7 @@ def uuid_hash_31bit(id: UUID) -> int:
 
 
 def yield_sessions_for_ids(
-    ids: list[UUID], group: Group, on_day: datetime
+    ids: Iterable[UUID], group: Group, on_day: datetime
 ) -> Iterable[Session]:
     for user_int, user_uuid in enumerate(ids):
         yield Session(
@@ -40,7 +41,12 @@ def yield_sessions_for_ids(
         )
 
 
-def generate_test_data() -> None:
+def generate_test_data(
+    n_user_ids: int = N_USER_IDS,
+    n_days: int = N_DAYS,
+    created_now: datetime = CREATED_NOW,
+    db_batch_size: int = DB_BATCH_SIZE,
+) -> None:
     """
     Creates a list of users and inserts sessions for those users for each day of the week.
 
@@ -50,21 +56,31 @@ def generate_test_data() -> None:
     For every day after that, it will insert sessions for a further 1/N_DAYS of users
     and all previous users
     """
-    user_ids = [UUID(int=i) for i in range(N_USER_IDS)]
-    for day_of_week in range(N_DAYS + 1):
+
+    for day_of_week in range(n_days + 1):
         group = Group.objects.create(
             id=UUID(int=day_of_week),
-            created=CREATED_NOW + timedelta(days=day_of_week),
+            created=created_now + timedelta(days=day_of_week),
         )
+        total_sessions_per_day = int(day_of_week * (n_user_ids / n_days))
 
-        Session.objects.bulk_create(
+        # This creates an iterator that can generate Sessions on demand
+        session_factory = iter(
             yield_sessions_for_ids(
-                ids=user_ids[: int(day_of_week * (N_USER_IDS / N_DAYS))],
+                ids=(UUID(int=i) for i in range(total_sessions_per_day)),
                 group=group,
-                on_day=CREATED_NOW + timedelta(days=day_of_week),
-            ),
-            batch_size=DB_BATCH_SIZE,
+                on_day=created_now + timedelta(days=day_of_week),
+            )
         )
+        # Insert batches into the db:
+        # The reason we do not just feed all the sessions is that `.bulk_create`
+        # will consume the entire set before communicating with the db.
+        # The `batch_size` is only used for communicating with the db.
+        while batch_of_sessions := tuple(islice(session_factory, db_batch_size)):
+            Session.objects.bulk_create(
+                batch_of_sessions,
+                batch_size=db_batch_size,
+            )
 
 
 @pytest.fixture(scope="session")
