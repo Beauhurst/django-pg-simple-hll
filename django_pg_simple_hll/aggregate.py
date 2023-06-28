@@ -18,3 +18,19 @@ class HLLCardinality(Aggregate):
     allow_distinct = False
     output_field = IntegerField()
     empty_result_set_value = 0
+
+
+class HLLCardinalityFromHash(Aggregate):
+    """
+    Return an approximate distinct count based on the HyperLogLog algorithm
+    as described in:
+        http://algo.inria.fr/flajolet/Publications/FlMa85.pdf
+
+    Requires the input to be previously hashed, see `functions.HLLHash`
+    """
+
+    function = "hll_cardinality_from_hash"
+    name = "HLLCardinalityFromHash"
+    allow_distinct = False
+    output_field = IntegerField()
+    empty_result_set_value = 0
