@@ -65,7 +65,7 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
 SELECT hll_bucket(hll_agg_state, hll_hash(input), hll_precision);
 $$;
 
--- -- hash and bucket in one function with default precision of 9
+-- hash and bucket in one function with default precision of 9
 CREATE OR REPLACE FUNCTION hll_hash_and_bucket(
     hll_agg_state int [],
     input anyelement
