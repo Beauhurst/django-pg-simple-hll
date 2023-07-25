@@ -8,6 +8,7 @@ DROP FUNCTION IF EXISTS hll_bucket(int [], anyelement, int);
 -- Default hashing function, it turns any input into an unsigned 32 bit integer
 CREATE OR REPLACE FUNCTION hll_hash(input anyelement) RETURNS int
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+-- hash and unset the signing bit
 SELECT HASHTEXT(input::text) & ~(1 << 31)
 $$;
 
