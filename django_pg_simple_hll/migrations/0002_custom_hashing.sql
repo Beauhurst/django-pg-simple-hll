@@ -26,7 +26,7 @@ CREATE OR REPLACE FUNCTION hll_bucket(
 ) RETURNS int []
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE AS $$
 DECLARE
-    -- eg. for 512 buckets, hll_precision is 9 because 2**9 -> 512
+    -- eg. a hll_precision 9 sets the number of buckets to 512, because 2**9 -> 512
     n_buckets int := POW(2, hll_precision);
     -- bucket the hash into one of n buckets
     -- we add 1 because postgres arrays are 1-indexed
