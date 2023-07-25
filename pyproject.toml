@@ -86,9 +86,15 @@ django_settings_module = "testapp.settings"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra --cov=django_pg_simple_hll --cov-branch -n auto"
+addopts = "-ra --cov=django_pg_simple_hll -n auto"
 DJANGO_SETTINGS_MODULE = "testapp.settings"
 testpaths = ["testapp/tests.py"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
 
 [tool.sqlfluff.core]
 dialect = "postgres"
