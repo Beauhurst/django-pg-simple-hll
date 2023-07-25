@@ -11,9 +11,9 @@ from django.utils.timezone import now
 
 from .models import Group, Session
 
-CREATED_NOW = now().replace(hour=0, minute=0, second=0, microsecond=0)
-N_USER_IDS = 140_000
-N_DAYS = 7
+TEST_DATA_BASE_TIMESTAMP = now().replace(hour=0, minute=0, second=0, microsecond=0)
+TEST_DATA_N_USER_IDS = 140_000
+TEST_DATA_N_SESSION_DAYS = 7
 
 DB_BATCH_SIZE = 2_500
 
@@ -42,9 +42,9 @@ def yield_sessions_for_ids(
 
 
 def generate_test_data(
-    n_user_ids: int = N_USER_IDS,
-    n_days: int = N_DAYS,
-    created_now: datetime = CREATED_NOW,
+    n_user_ids: int = TEST_DATA_N_USER_IDS,
+    n_session_days: int = TEST_DATA_N_SESSION_DAYS,
+    base_timestamp: datetime = TEST_DATA_BASE_TIMESTAMP,
     db_batch_size: int = DB_BATCH_SIZE,
 ) -> None:
     """
@@ -52,24 +52,24 @@ def generate_test_data(
 
     This is a fixture because it's expensive to create the data, and we want to reuse it
 
-    The first day it will insert sessions for 1/N_DAYS of the users
-    For every day after that, it will insert sessions for a further 1/N_DAYS of users
-    and all previous users
+    The first day it will insert sessions for 1/n_session_days of the users
+    For every day after that, it will insert sessions for a further 1/n_session_days
+    of users and all previous users
     """
 
-    for day_of_week in range(n_days + 1):
+    for day_of_week in range(n_session_days + 1):
         group = Group.objects.create(
             id=UUID(int=day_of_week),
-            created=created_now + timedelta(days=day_of_week),
+            created=base_timestamp + timedelta(days=day_of_week),
         )
-        total_sessions_per_day = int(day_of_week * (n_user_ids / n_days))
+        total_sessions_per_day = int(day_of_week * (n_user_ids / n_session_days))
 
         # This creates an iterator that can generate Sessions on demand
         session_factory = iter(
             yield_sessions_for_ids(
                 ids=(UUID(int=i) for i in range(total_sessions_per_day)),
                 group=group,
-                on_day=created_now + timedelta(days=day_of_week),
+                on_day=base_timestamp + timedelta(days=day_of_week),
             )
         )
         # Insert batches into the db:

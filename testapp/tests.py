@@ -11,7 +11,7 @@ from django.db.utils import DataError, ProgrammingError
 from django_pg_simple_hll.aggregate import HLLCardinality, HLLCardinalityFromHash
 from django_pg_simple_hll.functions import HLLHash
 
-from .conftest import CREATED_NOW, N_DAYS
+from .conftest import TEST_DATA_BASE_TIMESTAMP, TEST_DATA_N_SESSION_DAYS
 from .hyperloglog import HyperLogLog
 from .models import Group, Session
 
@@ -33,8 +33,8 @@ def _get_reference_approximation(field: str, precision: int) -> dict[int, int]:
             return {int(key): val for key, val in json.load(f).items()}
 
     fixtures = {}
-    for day_of_week in range(N_DAYS):
-        timestamp = CREATED_NOW + timedelta(days=day_of_week + 2)
+    for day_of_week in range(TEST_DATA_N_SESSION_DAYS):
+        timestamp = TEST_DATA_BASE_TIMESTAMP + timedelta(days=day_of_week + 2)
         query = (
             Session.objects.filter(created__lt=timestamp)
             .annotate(raw=F(field), hash=HLLHash(F(field)))
@@ -64,7 +64,7 @@ def test_hll_cardinality_total(field: str, precision: int) -> None:
         approx_unique_users=HLLCardinality(field, precision),
     )
 
-    assert fixtures[N_DAYS - 1] == aggregation["approx_unique_users"]
+    assert fixtures[TEST_DATA_N_SESSION_DAYS - 1] == aggregation["approx_unique_users"]
 
 
 @pytest.mark.parametrize("field", FIELDS)
@@ -75,7 +75,7 @@ def test_hll_cardinality_with_default_precision_total(field: str) -> None:
         approx_unique_users=HLLCardinality(field),
     )
 
-    assert fixtures[N_DAYS - 1] == aggregation["approx_unique_users"]
+    assert fixtures[TEST_DATA_N_SESSION_DAYS - 1] == aggregation["approx_unique_users"]
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
@@ -86,7 +86,7 @@ def test_hll_cardinality_from_hash_total(field: str, precision: int) -> None:
         approx_unique_users=HLLCardinalityFromHash(HLLHash(field), precision),
     )
 
-    assert fixtures[N_DAYS - 1] == aggregation["approx_unique_users"]
+    assert fixtures[TEST_DATA_N_SESSION_DAYS - 1] == aggregation["approx_unique_users"]
 
 
 @pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
@@ -97,7 +97,7 @@ def test_hll_cardinality_from_hash_pre_hashed_total(precision: int) -> None:
         approx_unique_users=HLLCardinalityFromHash("user_hash", precision),
     )
 
-    assert fixtures[N_DAYS - 1] == aggregation["approx_unique_users"]
+    assert fixtures[TEST_DATA_N_SESSION_DAYS - 1] == aggregation["approx_unique_users"]
 
 
 @pytest.mark.django_db()
@@ -186,7 +186,10 @@ def test_hll_cardinality_with_filter(field: str, precision: int) -> None:
         approx_unique_users=HLLCardinality(
             field,
             precision,
-            filter=Q(created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)),
+            filter=Q(
+                created__lt=TEST_DATA_BASE_TIMESTAMP
+                + timedelta(days=days_for_filter + 2)
+            ),
         ),
     )
     assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
@@ -202,7 +205,10 @@ def test_hll_cardinality_from_hash_with_filter(field: str, precision: int) -> No
         approx_unique_users=HLLCardinalityFromHash(
             HLLHash(field),
             precision,
-            filter=Q(created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)),
+            filter=Q(
+                created__lt=TEST_DATA_BASE_TIMESTAMP
+                + timedelta(days=days_for_filter + 2)
+            ),
         ),
     )
     assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
@@ -218,7 +224,10 @@ def test_hll_cardinality_from_hash_pre_hashed_with_filter(precision: int) -> Non
         approx_unique_users=HLLCardinalityFromHash(
             "user_hash",
             precision,
-            filter=Q(created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)),
+            filter=Q(
+                created__lt=TEST_DATA_BASE_TIMESTAMP
+                + timedelta(days=days_for_filter + 2)
+            ),
         ),
     )
     assert fixtures[days_for_filter] == aggregation["approx_unique_users"]
@@ -231,7 +240,7 @@ def test_hll_cardinality_implicit_join(field: str, precision: int) -> None:
     days_for_filter = 4
 
     aggregation = Group.objects.filter(
-        created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)
+        created__lt=TEST_DATA_BASE_TIMESTAMP + timedelta(days=days_for_filter + 2)
     ).aggregate(
         approx_unique_users=HLLCardinality(f"sessions__{field}", precision),
     )
@@ -245,7 +254,7 @@ def test_hll_cardinality_from_hash_implicit_join(field: str, precision: int) -> 
     days_for_filter = 4
 
     aggregation = Group.objects.filter(
-        created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)
+        created__lt=TEST_DATA_BASE_TIMESTAMP + timedelta(days=days_for_filter + 2)
     ).aggregate(
         approx_unique_users=HLLCardinalityFromHash(
             HLLHash(f"sessions__{field}"), precision
@@ -261,7 +270,7 @@ def test_hll_cardinality_from_hash_pre_hashed_implicit_join(precision: int) -> N
     days_for_filter = 4
 
     aggregation = Group.objects.filter(
-        created__lt=CREATED_NOW + timedelta(days=days_for_filter + 2)
+        created__lt=TEST_DATA_BASE_TIMESTAMP + timedelta(days=days_for_filter + 2)
     ).aggregate(
         approx_unique_users=HLLCardinalityFromHash("sessions__user_hash", precision),
     )
@@ -276,7 +285,8 @@ def test_hll_cardinality_with_expression(field: str, precision: int) -> None:
 
     expression = Case(
         When(
-            created__lt=CREATED_NOW + timedelta(days=days_for_expression + 2),
+            created__lt=TEST_DATA_BASE_TIMESTAMP
+            + timedelta(days=days_for_expression + 2),
             then=F(field),
         )
     )  # Works since NULLs aren't counted
@@ -294,7 +304,8 @@ def test_hll_cardinality_from_hash_with_expression(field: str, precision: int) -
 
     expression = Case(
         When(
-            created__lt=CREATED_NOW + timedelta(days=days_for_expression + 2),
+            created__lt=TEST_DATA_BASE_TIMESTAMP
+            + timedelta(days=days_for_expression + 2),
             then=F(field),
         )
     )  # Works since NULLs aren't counted
@@ -312,7 +323,8 @@ def test_hll_cardinality_from_hash_pre_hashed_with_expression(precision: int) ->
 
     expression = Case(
         When(
-            created__lt=CREATED_NOW + timedelta(days=days_for_expression + 2),
+            created__lt=TEST_DATA_BASE_TIMESTAMP
+            + timedelta(days=days_for_expression + 2),
             then=F("user_hash"),
         )
     )  # Works since NULLs aren't counted
