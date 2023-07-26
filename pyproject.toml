@@ -45,6 +45,7 @@ pytest-cov = "^4.0.0"
 pytest-django = "^4.5.2"
 ruff = "^0.0.260"
 sqlfluff = "^2.0.5"
+pytest-xdist = "^3.3.1"
 
 [tool.poetry.group.debug]
 optional = true
@@ -85,9 +86,15 @@ django_settings_module = "testapp.settings"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra --cov"
+addopts = "-ra --cov=django_pg_simple_hll -n auto"
 DJANGO_SETTINGS_MODULE = "testapp.settings"
 testpaths = ["testapp/tests.py"]
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
 
 [tool.sqlfluff.core]
 dialect = "postgres"
