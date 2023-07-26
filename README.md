@@ -231,6 +231,11 @@ If you can use [an optimised version](https://github.com/citusdata/postgresql-hl
 
 Use this if you can't install extensions on your database, such as on [Amazon RDS](https://aws.amazon.com/rds/).
 
+## SQL only
+
+Don't care about the Django functions, and just want to be able to run the SQL?
+The entire implementation is in a [single SQL file](django_pg_simple_hll/migrations/0002_custom_hashing.sql)
+
 ## Notes on SQL implementation
 
 This is a low-privilege implementation of [Hyperloglog](https://www.lix.polytechnique.fr/~fusy/Articles/FlFuGaMe07.pdf) approximate cardinality aggregation written in SQL and some [PL/pgSQL](https://www.postgresql.org/docs/current/plpgsql.html). Read about it [here](http://alejandro.giacometti.me/2023-03-30/hyperloglog-in-sql/),

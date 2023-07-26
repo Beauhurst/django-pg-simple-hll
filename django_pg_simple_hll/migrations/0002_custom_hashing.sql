@@ -3,7 +3,8 @@ DROP AGGREGATE IF EXISTS hll_cardinality(anyelement, int);
 DROP AGGREGATE IF EXISTS hll_cardinality(anyelement);
 DROP FUNCTION IF EXISTS hll_bucket(int [], anyelement);
 DROP FUNCTION IF EXISTS hll_bucket(int [], anyelement, int);
-
+DROP FUNCTION IF EXISTS hll_bucket_combine(int [], int []);
+DROP FUNCTION IF EXISTS hll_approximate(int [], int);
 
 -- Default hashing function, it turns any input into an unsigned 32 bit integer
 CREATE OR REPLACE FUNCTION hll_hash(input anyelement) RETURNS int
@@ -74,6 +75,84 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE AS $$
 BEGIN
     RETURN hll_hash_and_bucket(hll_agg_state, input, 9);
 END $$;
+
+-- The combinefunc
+-- combines two states, taking the smaller hash from each corresponding index
+-- we don't have any extra logic here for the two flanking extra elements at
+-- the beginning and the end of the array because they should just be
+-- copied as they are the same
+CREATE OR REPLACE FUNCTION hll_bucket_combine(
+    hll_left_agg_state int [],
+    hll_right_agg_state int []
+) RETURNS int []
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+SELECT ARRAY(
+    SELECT
+        LEAST(left_bucket_hash, right_bucket_hash)
+    FROM
+        UNNEST(hll_left_agg_state, hll_right_agg_state) AS AGG_STATE(left_bucket_hash, right_bucket_hash)
+) $$;
+
+-- The finalfunc
+-- takes the hll_agg_state and approximates cardinality
+CREATE OR REPLACE FUNCTION hll_approximate(
+    hll_agg_state int []
+) RETURNS int
+LANGUAGE sql IMMUTABLE AS $$
+WITH n_buckets AS (
+    SELECT ARRAY_LENGTH(hll_agg_state, 1) AS n_buckets
+),
+hll_agg_state_table AS (
+    SELECT
+        31 - FLOOR(LOG(2, bucket_hash)) AS most_significant_bit,
+        bucket_key
+    FROM UNNEST(hll_agg_state) WITH ORDINALITY AS hll_agg_state_table(bucket_hash, bucket_key)
+    WHERE bucket_hash IS NOT NULL -- ignore all null elements
+),
+alpha AS (
+    -- alpha is a correction constant related to the number of buckets used
+    -- defined as follows:
+    SELECT
+        CASE
+            WHEN n_buckets.n_buckets = 16 THEN 0.673 -- for precision 4
+            WHEN n_buckets.n_buckets = 32 THEN 0.697 -- for precision 5
+            WHEN n_buckets.n_buckets = 64 THEN 0.709 -- for precision 6
+            ELSE (0.7213 / (1 + 1.079 / n_buckets.n_buckets)) -- for precision >= 7
+        END AS alpha
+    FROM n_buckets
+),
+-- compute counts and aggregates
+counted AS (
+    SELECT
+        MAX(n_buckets.n_buckets) - COUNT(hll_agg_state_table.most_significant_bit) AS n_zero_buckets,
+        SUM(POW(2, -1 * hll_agg_state_table.most_significant_bit)) AS harmonic_mean
+    FROM hll_agg_state_table, n_buckets
+),
+-- estimate
+estimation AS (
+    SELECT
+        (
+            (POW(n_buckets.n_buckets, 2) * alpha.alpha) / (counted.n_zero_buckets + counted.harmonic_mean)
+        )::int AS approximated_cardinality
+    FROM counted, n_buckets, alpha
+)
+-- correct for biases
+SELECT
+    CASE
+        WHEN
+            estimation.approximated_cardinality < 2.5 * n_buckets.n_buckets
+            AND counted.n_zero_buckets > 0 THEN
+        (
+                alpha.alpha
+                * (
+                    n_buckets.n_buckets
+                    * LOG(2, (n_buckets.n_buckets::numeric / counted.n_zero_buckets)::int
+                )
+            )
+        )::int
+        ELSE estimation.approximated_cardinality
+    END AS approximated_cardinality_corrected
+FROM estimation, alpha, n_buckets, counted $$;
 
 -- aggregation with precision argument
 CREATE OR REPLACE AGGREGATE hll_cardinality_from_hash(int, int) (
