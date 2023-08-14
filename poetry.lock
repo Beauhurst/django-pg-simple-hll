@@ -1017,13 +1017,13 @@ files = [
 
 [[package]]
 name = "sqlfluff"
-version = "2.1.4"
+version = "2.2.1"
 description = "The SQL Linter for Humans"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "sqlfluff-2.1.4-py3-none-any.whl", hash = "sha256:3884e375b9a884485263cf156b21ff55a38adadb7be6451e27ee6b8f1a75f018"},
-    {file = "sqlfluff-2.1.4.tar.gz", hash = "sha256:86ee197cb6919e50962c4def5f64ba8bafb35b1ffab943b2e87fca137e3df2a2"},
+    {file = "sqlfluff-2.2.1-py3-none-any.whl", hash = "sha256:86b3f85388e10c69eeea12ccaa169f66248e9240d57f22b66e84048cc7333b08"},
+    {file = "sqlfluff-2.2.1.tar.gz", hash = "sha256:93b4c49a6640e15fa5fddbc022d0544675b9d4ac382d68da029d07c713cb6e7e"},
 ]
 
 [package.dependencies]
