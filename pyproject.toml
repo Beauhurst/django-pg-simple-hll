@@ -80,6 +80,7 @@ show_error_codes = true
 warn_redundant_casts = true
 warn_unused_configs = true
 plugins = ["mypy_django_plugin.main"]
+packages = ["django_pg_simple_hll", "testapp"]
 
 [tool.django-stubs]
 django_settings_module = "testapp.settings"
