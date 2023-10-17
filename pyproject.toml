@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "django_pg_simple_hll"
-version = "0.2.1"
+version = "0.2.2"
 description = "A low-privilege implementation of hyperloglog for django and postgres"
 authors = ["Beauhurst <opensource@beauhurst.com>"]
 license = "MIT"
@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3 :: Only",
 ]
 packages = [
@@ -29,7 +30,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
+python = ">=3.9,<3.13"
 Django = ">=3.2.4"
 psycopg2 = "^2.9.6"
 
@@ -80,6 +81,7 @@ show_error_codes = true
 warn_redundant_casts = true
 warn_unused_configs = true
 plugins = ["mypy_django_plugin.main"]
+packages = ["django_pg_simple_hll", "testapp"]
 
 [tool.django-stubs]
 django_settings_module = "testapp.settings"

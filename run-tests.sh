@@ -13,7 +13,7 @@ black --check .
 # sqlfluff lint
 
 # mypy test app
-mypy --package testapp --package django_pg_simple_hll
+mypy
 
 # pytest
 pytest
