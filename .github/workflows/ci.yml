@@ -26,8 +26,10 @@ jobs:
         exclude:
           - python-version: "3.11"
             django-version: "3.2"
-          - python-version: "3.11"
-            django-version: "4.0"
+          - python-version: "3.12"
+            django-version: "3.2"
+          - python-version: "3.9"
+            django-version: "5.0"
         # include:
         #   - python-version: "3.13"
         #     postgres-version: "16"
