@@ -1,9 +1,8 @@
 from os import PathLike
 from pathlib import Path
-from typing import Union
 
 
-def load_sql(path: Union[PathLike[str], str], reverse: bool = False) -> str:
+def load_sql(path: PathLike[str] | str, reverse: bool = False) -> str:
     """
     This utility loads sql from base path with a `.sql` suffix,
     optionally it attaches a `.reverse.sql` suffix

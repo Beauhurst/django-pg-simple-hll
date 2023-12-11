@@ -55,7 +55,7 @@ ipdb = "^0.13.13"
 ipython = "^8.12.0"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 select = ["B", "COM819", "C4", "E", "F", "I", "PT", "Q", "UP", "W"]
 ignore = ["E501"]
 # Avoid trying to fix flake8-bugbear (`B`) violations.
