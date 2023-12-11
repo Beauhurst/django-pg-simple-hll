@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
         postgres-version: ["12", "13", "14", "15", "16"]
         django-version: ["3.2", "4.2", "5.0"]
         experimental: [false]
@@ -28,8 +28,6 @@ jobs:
             django-version: "3.2"
           - python-version: "3.12"
             django-version: "3.2"
-          - python-version: "3.9"
-            django-version: "5.0"
         # include:
         #   - python-version: "3.13"
         #     postgres-version: "16"
