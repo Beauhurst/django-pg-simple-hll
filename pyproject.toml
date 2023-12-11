@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "django_pg_simple_hll"
-version = "0.2.2"
+version = "0.3.0"
 description = "A low-privilege implementation of hyperloglog for django and postgres"
 authors = ["Beauhurst <opensource@beauhurst.com>"]
 license = "MIT"
@@ -16,9 +16,9 @@ classifiers = [
   "Framework :: Django :: 4.0",
   "Framework :: Django :: 4.1",
   "Framework :: Django :: 4.2",
+  "Framework :: Django :: 5.0",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -30,7 +30,7 @@ packages = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.10,<3.13"
 Django = ">=3.2.4"
 psycopg2 = "^2.9.6"
 
@@ -38,13 +38,12 @@ psycopg2 = "^2.9.6"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
 django-stubs = "^4.2"
 mypy = "^1.1.1"
 pytest = "^7.2.2"
 pytest-cov = "^4.0.0"
 pytest-django = "^4.5.2"
-ruff = "<=0.1.0"
+ruff = "^0"
 sqlfluff = "^2.0.5"
 pytest-xdist = "^3.3.1"
 
@@ -56,7 +55,7 @@ ipdb = "^0.13.13"
 ipython = "^8.12.0"
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py310"
 select = ["B", "COM819", "C4", "E", "F", "I", "PT", "Q", "UP", "W"]
 ignore = ["E501"]
 # Avoid trying to fix flake8-bugbear (`B`) violations.
