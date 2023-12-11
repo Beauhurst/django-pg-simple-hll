@@ -1,11 +1,11 @@
 #!/bin/sh
 set -x -e
 
-# ruff
+# lint
 ruff check .
 
-# black
-black --check .
+# Check formatting
+ruff format --diff .
 
 # sqlfluff
 # TODO: Enforce linting when sqlfluff can handle postgresql aggregates

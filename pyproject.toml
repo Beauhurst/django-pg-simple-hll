@@ -38,13 +38,12 @@ psycopg2 = "^2.9.6"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
 django-stubs = "^4.2"
 mypy = "^1.1.1"
 pytest = "^7.2.2"
 pytest-cov = "^4.0.0"
 pytest-django = "^4.5.2"
-ruff = "<=0.1.0"
+ruff = "^0"
 sqlfluff = "^2.0.5"
 pytest-xdist = "^3.3.1"
 
