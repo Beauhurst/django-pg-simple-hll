@@ -57,7 +57,7 @@ def _get_reference_approximation(field: str, precision: int) -> dict[int, int]:
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_total(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     aggregation = Session.objects.aggregate(
@@ -68,7 +68,7 @@ def test_hll_cardinality_total(field: str, precision: int) -> None:
 
 
 @pytest.mark.parametrize("field", FIELDS)
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_with_default_precision_total(field: str) -> None:
     fixtures = _get_reference_approximation(field, 9)
     aggregation = Session.objects.aggregate(
@@ -79,7 +79,7 @@ def test_hll_cardinality_with_default_precision_total(field: str) -> None:
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_total(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     aggregation = Session.objects.aggregate(
@@ -90,7 +90,7 @@ def test_hll_cardinality_from_hash_total(field: str, precision: int) -> None:
 
 
 @pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_pre_hashed_total(precision: int) -> None:
     fixtures = _get_reference_approximation("user_hash", precision)
     aggregation = Session.objects.aggregate(
@@ -100,7 +100,7 @@ def test_hll_cardinality_from_hash_pre_hashed_total(precision: int) -> None:
     assert fixtures[TEST_DATA_N_SESSION_DAYS - 1] == aggregation["approx_unique_users"]
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_raises_error_without_expression() -> None:
     """HLLCardinality cannot be used without targetting a specific field"""
     with pytest.raises(ProgrammingError):
@@ -109,7 +109,7 @@ def test_hll_cardinality_raises_error_without_expression() -> None:
         )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_raises_error_without_expression() -> None:
     """HLLCardinalityFromHash cannot be used without targetting a specific field"""
     with pytest.raises(ProgrammingError):
@@ -118,7 +118,7 @@ def test_hll_cardinality_from_hash_raises_error_without_expression() -> None:
         )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_raises_error_with_star() -> None:
     """HLLCardinality cannot be used without targetting a specific field"""
     with pytest.raises(FieldError):
@@ -127,7 +127,7 @@ def test_hll_cardinality_raises_error_with_star() -> None:
         )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_raises_error_with_star_and_precision() -> None:
     """HLLCardinality cannot be used without targetting a specific field"""
     with pytest.raises(FieldError):
@@ -136,7 +136,7 @@ def test_hll_cardinality_raises_error_with_star_and_precision() -> None:
         )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_raises_error_with_star() -> None:
     """HLLCardinality cannot be used without targetting a specific field"""
     with pytest.raises(FieldError):
@@ -145,7 +145,7 @@ def test_hll_cardinality_from_hash_raises_error_with_star() -> None:
         )
 
 
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_raises_error_with_no_precision() -> None:
     """HLLCardinalityFromHash cannot be used without targetting a specific field"""
     with pytest.raises(ProgrammingError):
@@ -155,7 +155,7 @@ def test_hll_cardinality_from_hash_raises_error_with_no_precision() -> None:
 
 
 @pytest.mark.parametrize("field", FIELDS)
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_raises_error_with_no_hash(field: str) -> None:
     """HLLCardinalityFromHash cannot be used without targetting a specific field"""
 
@@ -177,7 +177,7 @@ def test_hll_cardinality_from_hash_raises_error_with_no_hash(field: str) -> None
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_with_filter(field: str, precision: int) -> None:
     days_for_filter = 2
     fixtures = _get_reference_approximation(field, precision)
@@ -196,7 +196,7 @@ def test_hll_cardinality_with_filter(field: str, precision: int) -> None:
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_with_filter(field: str, precision: int) -> None:
     days_for_filter = 2
     fixtures = _get_reference_approximation(field, precision)
@@ -215,7 +215,7 @@ def test_hll_cardinality_from_hash_with_filter(field: str, precision: int) -> No
 
 
 @pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_pre_hashed_with_filter(precision: int) -> None:
     days_for_filter = 2
     fixtures = _get_reference_approximation("user_hash", precision)
@@ -234,7 +234,7 @@ def test_hll_cardinality_from_hash_pre_hashed_with_filter(precision: int) -> Non
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_implicit_join(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     days_for_filter = 4
@@ -248,7 +248,7 @@ def test_hll_cardinality_implicit_join(field: str, precision: int) -> None:
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_implicit_join(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     days_for_filter = 4
@@ -264,7 +264,7 @@ def test_hll_cardinality_from_hash_implicit_join(field: str, precision: int) -> 
 
 
 @pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_pre_hashed_implicit_join(precision: int) -> None:
     fixtures = _get_reference_approximation("user_hash", precision)
     days_for_filter = 4
@@ -278,7 +278,7 @@ def test_hll_cardinality_from_hash_pre_hashed_implicit_join(precision: int) -> N
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_with_expression(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     days_for_expression = 3
@@ -297,7 +297,7 @@ def test_hll_cardinality_with_expression(field: str, precision: int) -> None:
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_with_expression(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
     days_for_expression = 3
@@ -316,7 +316,7 @@ def test_hll_cardinality_from_hash_with_expression(field: str, precision: int) -
 
 
 @pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_pre_hashed_with_expression(precision: int) -> None:
     fixtures = _get_reference_approximation("user_hash", precision)
     days_for_expression = 3
@@ -335,7 +335,7 @@ def test_hll_cardinality_from_hash_pre_hashed_with_expression(precision: int) ->
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_by_date(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
 
@@ -353,7 +353,7 @@ def test_hll_cardinality_by_date(field: str, precision: int) -> None:
 
 
 @pytest.mark.parametrize(("field", "precision"), product(FIELDS, PRECISIONS_TO_TEST))
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_by_date(field: str, precision: int) -> None:
     fixtures = _get_reference_approximation(field, precision)
 
@@ -371,7 +371,7 @@ def test_hll_cardinality_from_hash_by_date(field: str, precision: int) -> None:
 
 
 @pytest.mark.parametrize("precision", PRECISIONS_TO_TEST)
-@pytest.mark.django_db()
+@pytest.mark.django_db
 def test_hll_cardinality_from_hash_pre_hashed_by_date(precision: int) -> None:
     fixtures = _get_reference_approximation("user_hash", precision)
 
