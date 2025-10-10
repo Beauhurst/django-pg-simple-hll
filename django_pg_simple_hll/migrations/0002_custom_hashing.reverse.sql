@@ -7,5 +7,3 @@ DROP FUNCTION IF EXISTS hll_bucket(int [], int, int);
 DROP FUNCTION IF EXISTS hll_hash(anyelement);
 DROP FUNCTION IF EXISTS hll_bucket_combine(int [], int []);
 DROP FUNCTION IF EXISTS hll_approximate(int [], int);
-
-
