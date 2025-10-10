@@ -155,32 +155,32 @@ SELECT
 FROM estimation, alpha, n_buckets, counted $$;
 
 -- aggregation with precision argument
-CREATE OR REPLACE AGGREGATE hll_cardinality_from_hash(int, int) (
-    SFUNC = hll_bucket,
-    STYPE = int [],
-    FINALFUNC = hll_approximate,
-    COMBINEFUNC = hll_bucket_combine,
-    INITCOND = '{}',
-    PARALLEL = SAFE
+CREATE OR REPLACE AGGREGATE hll_cardinality_from_hash (int, int)(
+    sfunc = hll_bucket,
+    stype = int[],
+    finalfunc = hll_approximate,
+    combinefunc = hll_bucket_combine,
+    initcond = '{}',
+    parallel = safe
 );
 
 -- aggregation with precision argument
-CREATE OR REPLACE AGGREGATE hll_cardinality(anyelement, int) (
-    SFUNC = hll_hash_and_bucket,
-    STYPE = int [],
-    FINALFUNC = hll_approximate,
-    COMBINEFUNC = hll_bucket_combine,
-    INITCOND = '{}',
-    PARALLEL = SAFE
+CREATE OR REPLACE AGGREGATE hll_cardinality (anyelement, int)(
+    sfunc = hll_hash_and_bucket,
+    stype = int[],
+    finalfunc = hll_approximate,
+    combinefunc = hll_bucket_combine,
+    initcond = '{}',
+    parallel = safe
 );
 
 
 --  aggregation with default precision argument
-CREATE OR REPLACE AGGREGATE hll_cardinality(anyelement) (
-    SFUNC = hll_hash_and_bucket,
-    STYPE = int [],
-    FINALFUNC = hll_approximate,
-    COMBINEFUNC = hll_bucket_combine,
-    INITCOND = '{}',
-    PARALLEL = SAFE
+CREATE OR REPLACE AGGREGATE hll_cardinality (anyelement)(
+    sfunc = hll_hash_and_bucket,
+    stype = int[],
+    finalfunc = hll_approximate,
+    combinefunc = hll_bucket_combine,
+    initcond = '{}',
+    parallel = safe
 );

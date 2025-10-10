@@ -138,22 +138,22 @@ FROM estimation, alpha, n_buckets, counted $$;
 
 
 -- aggregation with precision argument
-CREATE OR REPLACE AGGREGATE hll_cardinality(anyelement, int) (
-    SFUNC = hll_bucket,
-    STYPE = int [],
-    FINALFUNC = hll_approximate,
-    COMBINEFUNC = hll_bucket_combine,
-    INITCOND = '{}',
-    PARALLEL = SAFE
+CREATE OR REPLACE AGGREGATE hll_cardinality (anyelement, int)(
+    sfunc = hll_bucket,
+    stype = int[],
+    finalfunc = hll_approximate,
+    combinefunc = hll_bucket_combine,
+    initcond = '{}',
+    parallel = safe
 );
 
 
 --  aggregation with default precision argument
-CREATE OR REPLACE AGGREGATE hll_cardinality(anyelement) (
-    SFUNC = hll_bucket,
-    STYPE = int [],
-    FINALFUNC = hll_approximate,
-    COMBINEFUNC = hll_bucket_combine,
-    INITCOND = '{}',
-    PARALLEL = SAFE
+CREATE OR REPLACE AGGREGATE hll_cardinality (anyelement)(
+    sfunc = hll_bucket,
+    stype = int[],
+    finalfunc = hll_approximate,
+    combinefunc = hll_bucket_combine,
+    initcond = '{}',
+    parallel = safe
 );
